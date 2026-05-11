@@ -1,0 +1,52 @@
+/* DMS 全局样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 登录/注册页面背景 */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.auth-card {
+  width: 420px;
+  padding: 40px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.auth-card h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 24px;
+  color: #333;
+}
+
+.auth-card .switch-link {
+  text-align: center;
+  margin-top: 16px;
+  color: #999;
+}
+
+.auth-card .switch-link a {
+  color: #667eea;
+  cursor: pointer;
+}
+
+/* 主页布局 */
+.home-container {
+  min-height: 100vh;
+  background: #f0f2f5;
+}
