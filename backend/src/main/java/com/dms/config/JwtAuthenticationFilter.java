@@ -57,9 +57,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // 4. 构建权限信息并设置到 SecurityContext 中
                 String roleStr = switch (role) {
-                    case 1 -> "ROLE_STUDENT";
+                    case 1 -> "ROLE_ADMIN";
                     case 2 -> "ROLE_COACH";
-                    case 3 -> "ROLE_ADMIN";
+                    case 3 -> "ROLE_STUDENT";
                     default -> "ROLE_USER";
                 };
 

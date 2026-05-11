@@ -11,26 +11,27 @@ export const useUserStore = defineStore('user', () => {
   const username = ref<string>(localStorage.getItem('dms_username') || '')
   const role = ref<number>(Number(localStorage.getItem('dms_role')) || 0)
   const phone = ref<string>(localStorage.getItem('dms_phone') || '')
+  const menuList = ref<any[]>([]) // 缓存动态路由菜单
 
   /** 登录/注册成功后保存用户信息 */
-  function setUser(data: {
-    token: string
-    userId: number
-    username: string
-    role: number
-    phone: string
-  }) {
+  function setUser(data: any) {
+    const r = Number(data.role)
     token.value = data.token
-    userId.value = data.userId
+    userId.value = Number(data.userId)
     username.value = data.username
-    role.value = data.role
+    role.value = r
     phone.value = data.phone
 
     localStorage.setItem('dms_token', data.token)
     localStorage.setItem('dms_userId', String(data.userId))
     localStorage.setItem('dms_username', data.username)
-    localStorage.setItem('dms_role', String(data.role))
-    localStorage.setItem('dms_phone', data.phone)
+    localStorage.setItem('dms_role', String(r))
+    localStorage.setItem('dms_phone', data.phone || '')
+  }
+
+  /** 设置菜单列表 */
+  function setMenus(menus: any[]) {
+    menuList.value = menus
   }
 
   /** 退出登录时清除所有用户信息 */
@@ -40,6 +41,7 @@ export const useUserStore = defineStore('user', () => {
     username.value = ''
     role.value = 0
     phone.value = ''
+    menuList.value = []
 
     localStorage.removeItem('dms_token')
     localStorage.removeItem('dms_userId')
@@ -50,13 +52,12 @@ export const useUserStore = defineStore('user', () => {
 
   /** 获取角色中文名 */
   function getRoleName() {
-    switch (role.value) {
-      case 1: return '学员'
-      case 2: return '教练'
-      case 3: return '管理员'
-      default: return '未知'
-    }
+    const r = Number(role.value)
+    if (r === 1) return '管理员'
+    if (r === 2) return '教练员'
+    if (r === 3) return '学员'
+    return '普通用户(标识:' + role.value + ')'
   }
 
-  return { token, userId, username, role, phone, setUser, clearUser, getRoleName }
+  return { token, userId, username, role, phone, menuList, setUser, setMenus, clearUser, getRoleName }
 })

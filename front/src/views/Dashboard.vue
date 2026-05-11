@@ -26,7 +26,8 @@
         <a-descriptions-item label="用户ID">{{ userStore.userId }}</a-descriptions-item>
         <a-descriptions-item label="用户名">{{ userStore.username }}</a-descriptions-item>
         <a-descriptions-item label="手机号">{{ userStore.phone }}</a-descriptions-item>
-        <a-descriptions-item label="角色">{{ userStore.getRoleName() }}</a-descriptions-item>
+        <a-descriptions-item label="当前角色标识">{{ userStore.role }}</a-descriptions-item>
+        <a-descriptions-item label="角色名称">{{ userStore.getRoleName() }}</a-descriptions-item>
       </a-descriptions>
     </a-card>
   </div>
@@ -38,9 +39,9 @@ import { useUserStore } from '@/store/user'
 const userStore = useUserStore()
 
 const shortcuts = [
-  { path: '/registration', icon: '📝', title: '在线报名', desc: '提交报名材料，快速入学' },
-  { path: '/coach', icon: '👨‍🏫', title: '教练分配', desc: '根据需求选择合适教练' },
-  { path: '/progress', icon: '📚', title: '学习进度', desc: '查看各科目学习情况' },
-  { path: '/exam', icon: '🏆', title: '考试管理', desc: '预约考试、查询成绩' },
+  { path: '/app/registration', icon: '📝', title: '在线报名', desc: '提交报名材料，快速入学' },
+  { path: '/app/coach', icon: '👨‍🏫', title: '教练分配', desc: '根据需求选择合适教练' },
+  { path: '/app/progress', icon: '📚', title: '学习进度', desc: '查看各科目学习情况' },
+  { path: '/app/exam', icon: '🏆', title: '考试管理', desc: '预约考试、查询成绩' },
 ]
 </script>

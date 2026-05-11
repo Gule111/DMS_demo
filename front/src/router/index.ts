@@ -1,66 +1,24 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { useUserStore } from '@/store/user'
+import { getMyRoutes } from '@/api/menu'
+
+// 动态导入工具
+const views = import.meta.glob('@/views/**/*.vue')
 
 const routes = [
-  {
-    path: '/',
-    redirect: '/login'
-  },
-  {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/Login.vue'),
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: () => import('@/views/Register.vue'),
-  },
+  { path: '/', redirect: '/login' },
+  { path: '/login', name: 'Login', component: () => import('@/views/Login.vue') },
+  { path: '/register', name: 'Register', component: () => import('@/views/Register.vue') },
   {
     path: '/app',
     name: 'Layout',
     component: () => import('@/views/Layout.vue'),
     meta: { requiresAuth: true },
     redirect: '/app/dashboard',
-    children: [
-      {
-        path: 'dashboard',
-        name: 'Dashboard',
-        component: () => import('@/views/Dashboard.vue'),
-        meta: { title: '首页概览', icon: '📊' },
-      },
-      {
-        path: 'registration',
-        name: 'Registration',
-        component: () => import('@/views/Registration.vue'),
-        meta: { title: '在线报名', icon: '📝' },
-      },
-      {
-        path: 'coach',
-        name: 'Coach',
-        component: () => import('@/views/Coach.vue'),
-        meta: { title: '教练分配', icon: '👨‍🏫' },
-      },
-      {
-        path: 'progress',
-        name: 'Progress',
-        component: () => import('@/views/Progress.vue'),
-        meta: { title: '学习进度', icon: '📚' },
-      },
-      {
-        path: 'exam',
-        name: 'Exam',
-        component: () => import('@/views/Exam.vue'),
-        meta: { title: '考试管理', icon: '🏆' },
-      },
-      {
-        path: 'base-info',
-        name: 'BaseInfo',
-        component: () => import('@/views/BaseInfo.vue'),
-        meta: { title: '基础信息', icon: '⚙️' },
-      },
-    ],
+    children: []
   },
+  { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
 
 const router = createRouter({
@@ -68,17 +26,67 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, _from, next) => {
+// 路由加载标识，防止重复请求
+let isRoutesLoaded = false
+
+router.beforeEach(async (to, _from, next) => {
   const userStore = useUserStore()
 
+  // 1. 未登录处理
   if (to.meta.requiresAuth && !userStore.token) {
-    next('/login')
-  } else if ((to.path === '/login' || to.path === '/register' || to.path === '/') && userStore.token) {
-    // 已登录访问登录/注册页，直接进主系统
-    next('/app/dashboard')
-  } else {
-    next()
+    return next('/login')
   }
+
+  // 2. 已登录且未加载动态路由
+  if (userStore.token && !isRoutesLoaded) {
+    try {
+      const res: any = await getMyRoutes()
+      const menus = res.data || []
+      userStore.setMenus(menus) // 保存到 Store
+      
+      menus.forEach((menu: any) => {
+        let componentPath = ''
+        if (menu.component.includes('Dashboard')) componentPath = '/src/views/Dashboard.vue'
+        else if (menu.component.includes('UserManage')) componentPath = '/src/views/UserManage.vue'
+        else if (menu.component.includes('Enrollment') || menu.component.includes('Registration')) componentPath = '/src/views/Registration.vue'
+        else if (menu.component.includes('Coach') || menu.component.includes('AssignInstructor')) componentPath = '/src/views/Coach.vue'
+        else if (menu.component.includes('Progress')) componentPath = '/src/views/Progress.vue'
+        else if (menu.component.includes('Exam')) componentPath = '/src/views/Exam.vue'
+        else if (menu.component.includes('BaseInfo')) componentPath = '/src/views/BaseInfo.vue'
+
+        if (views[componentPath]) {
+          router.addRoute('Layout', {
+            path: menu.path.replace('/admin/', '').replace('/student/', '').replace('/instructor/', ''),
+            name: menu.menuName,
+            component: views[componentPath],
+            meta: { title: menu.menuName, icon: menu.icon || '📍' }
+          })
+        }
+      })
+
+      isRoutesLoaded = true
+      // 动态添加完路由后，必须用 next(to.fullPath) 触发一次重新匹配，否则当前导航会失败
+      return next({ ...to, replace: true })
+    } catch (e) {
+      console.error('动态路由加载失败:', e)
+      userStore.clearUser()
+      return next('/login')
+    }
+  }
+
+  // 3. 登录页重复进入处理
+  if (userStore.token && (to.path === '/login' || to.path === '/register' || to.path === '/')) {
+    return next('/app/dashboard')
+  }
+
+  next()
 })
+
+/**
+ * 退出登录时调用，重置加载标识
+ */
+export function resetRouter() {
+  isRoutesLoaded = false
+}
 
 export default router

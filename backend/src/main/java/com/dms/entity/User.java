@@ -9,33 +9,25 @@ import java.time.LocalDateTime;
  * 用户实体类
  */
 @Data
-@TableName("user")
+@TableName("sys_users")
 public class User {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 用户名 */
+    /** 登录名 */
     private String username;
 
     /** 密码 */
     private String password;
 
-    /** 角色(1:学员 2:教练 3:管理员) */
-    private Integer role;
-
-    /** 联系电话 */
+    /** 手机号 */
     private String phone;
 
+    /** 状态: 1-正常, 0-禁用 */
+    private Integer status;
+
     /** 创建时间 */
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    /** 更新时间 */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    /** 逻辑删除(0:未删除 1:已删除) */
-    @TableLogic
-    private Integer isDeleted;
+    @TableField("created_at")
+    private LocalDateTime createdAt;
 }

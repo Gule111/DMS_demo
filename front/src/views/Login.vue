@@ -11,9 +11,9 @@
       <h2>DMS 驾校报名系统</h2>
 
       <a-form :model="form" @finish="handleLogin" layout="vertical">
-        <a-form-item label="手机号" name="phone"
-          :rules="[{ required: true, message: '请输入手机号' }]">
-          <a-input v-model:value="form.phone" placeholder="请输入手机号" size="large" />
+        <a-form-item label="用户名/手机号" name="phone"
+          :rules="[{ required: true, message: '请输入用户名或手机号' }]">
+          <a-input v-model:value="form.phone" placeholder="请输入用户名或手机号" size="large" />
         </a-form-item>
 
         <a-form-item label="密码" name="password"
@@ -24,7 +24,7 @@
         <a-form-item label="验证码" name="code"
           :rules="[{ required: true, message: '请输入验证码' }]">
           <div style="display: flex; gap: 8px;">
-            <a-input v-model:value="form.code" placeholder="请输入验证码" size="large" />
+            <a-input v-model:value="form.code" placeholder="输入123456跳过短信验证" size="large" />
             <a-button size="large" :disabled="countdown > 0" @click="handleSendCode"
               :loading="sendingCode">
               {{ countdown > 0 ? `${countdown}秒后重发` : '获取验证码' }}
@@ -59,16 +59,13 @@ const userStore = useUserStore()
 const form = ref({
   phone: '',
   password: '',
-  code: '',
+  code: '123456', // 默认测试验证码
 })
 
 const loading = ref(false)
 const sendingCode = ref(false)
 const countdown = ref(0)
 let timer: ReturnType<typeof setInterval> | null = null
-
-const phoneRegex = /^1[3-9]\d{9}$/
-const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{6,20}$/
 
 // --- 动态阻尼倾斜效果逻辑 ---
 const cardRef = ref<HTMLElement | null>(null)
@@ -109,19 +106,7 @@ async function handleSendCode() {
     message.warning('请先输入手机号')
     return
   }
-  if (!phoneRegex.test(form.value.phone)) {
-    message.warning('手机号格式不正确')
-    return
-  }
-  if (!form.value.password) {
-    message.warning('请先输入密码')
-    return
-  }
-  if (!passwordRegex.test(form.value.password)) {
-    message.warning('密码须为6-20位，且包含字母和数字')
-    return
-  }
-
+  
   sendingCode.value = true
   try {
     const res: any = await sendCode(form.value.phone)
@@ -143,12 +128,12 @@ async function handleSendCode() {
 }
 
 async function handleLogin() {
-  if (!phoneRegex.test(form.value.phone)) {
-    message.warning('手机号格式不正确')
+  if (!form.value.phone) {
+    message.warning('请输入账号')
     return
   }
-  if (!passwordRegex.test(form.value.password)) {
-    message.warning('密码须为6-20位，且包含字母和数字')
+  if (!form.value.password) {
+    message.warning('请输入密码')
     return
   }
 

@@ -38,16 +38,19 @@ import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { logout } from '@/api/auth'
 import { useUserStore } from '@/store/user'
+import { resetRouter } from '@/router'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const collapsed = ref(false)
 
-// 从路由配置中提取菜单项
+// 侧边栏菜单项（基于从 Store 获取的 menuList）
 const menuRoutes = computed(() => {
-  const layoutRoute = router.options.routes.find((r) => r.path === '/app')
-  return layoutRoute?.children || []
+  return userStore.menuList.map(menu => ({
+    path: menu.path.replace('/admin/', '').replace('/student/', '').replace('/instructor/', ''),
+    meta: { title: menu.menuName, icon: menu.icon || '📍' }
+  }))
 })
 
 // 当前选中的菜单
@@ -58,7 +61,7 @@ const selectedKeys = computed(() => {
 
 // 当前页面标题
 const currentTitle = computed(() => {
-  return (route.meta?.title as string) || 'DMS 驾校报名系统'
+  return (route.meta?.title as string) || 'DMS 驾校管理系统'
 })
 
 // 菜单点击
@@ -71,9 +74,9 @@ async function handleLogout() {
   try {
     await logout()
   } catch {
-    // 即使后端报错，前端也要清除状态
   }
   userStore.clearUser()
+  resetRouter() // 重置路由加载标识
   message.success('已退出登录')
   router.push('/')
 }
