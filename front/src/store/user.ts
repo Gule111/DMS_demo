@@ -11,7 +11,6 @@ export const useUserStore = defineStore('user', () => {
   const username = ref<string>(localStorage.getItem('dms_username') || '')
   const role = ref<number>(Number(localStorage.getItem('dms_role')) || 0)
   const phone = ref<string>(localStorage.getItem('dms_phone') || '')
-  const menuList = ref<any[]>([]) // 缓存动态路由菜单
 
   /** 登录/注册成功后保存用户信息 */
   function setUser(data: any) {
@@ -29,11 +28,6 @@ export const useUserStore = defineStore('user', () => {
     localStorage.setItem('dms_phone', data.phone || '')
   }
 
-  /** 设置菜单列表 */
-  function setMenus(menus: any[]) {
-    menuList.value = menus
-  }
-
   /** 退出登录时清除所有用户信息 */
   function clearUser() {
     token.value = ''
@@ -41,7 +35,6 @@ export const useUserStore = defineStore('user', () => {
     username.value = ''
     role.value = 0
     phone.value = ''
-    menuList.value = []
 
     localStorage.removeItem('dms_token')
     localStorage.removeItem('dms_userId')
@@ -56,8 +49,8 @@ export const useUserStore = defineStore('user', () => {
     if (r === 1) return '管理员'
     if (r === 2) return '教练员'
     if (r === 3) return '学员'
-    return '普通用户(标识:' + role.value + ')'
+    return '普通用户'
   }
 
-  return { token, userId, username, role, phone, menuList, setUser, setMenus, clearUser, getRoleName }
+  return { token, userId, username, role, phone, setUser, clearUser, getRoleName }
 })

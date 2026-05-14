@@ -47,3 +47,8 @@ dms:
     sms-code-key-prefix: "dms:sms:code:"
     # SMS code expire in seconds (5min)
     sms-code-expire: 300
+  qiniu:
+    access-key: ${QINIU_ACCESS_KEY}
+    secret-key: ${QINIU_SECRET_KEY}
+    bucket: ${QINIU_BUCKET}
+    domain: ${QINIU_DOMAIN}

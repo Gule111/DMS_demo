@@ -1,11 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useUserStore } from '@/store/user'
-import { getMyRoutes } from '@/api/menu'
 
-// 动态导入工具
-const views = import.meta.glob('@/views/**/*.vue')
-
+/**
+ * 静态路由配置
+ * 通过 meta.roles 控制哪些角色可以看到该菜单
+ * 角色: 1=管理员, 2=教练员, 3=学员
+ */
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', name: 'Login', component: () => import('@/views/Login.vue') },
@@ -16,7 +17,56 @@ const routes = [
     component: () => import('@/views/Layout.vue'),
     meta: { requiresAuth: true },
     redirect: '/app/dashboard',
-    children: []
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('@/views/Dashboard.vue'),
+        meta: { title: '工作台', icon: '📊', roles: [1, 2, 3] }
+      },
+      {
+        path: 'registration',
+        name: 'Registration',
+        component: () => import('@/views/Registration.vue'),
+        meta: { title: '在线报名', icon: '📝', roles: [1, 3] }
+      },
+      {
+        path: 'coach',
+        name: 'Coach',
+        component: () => import('@/views/Coach.vue'),
+        meta: { title: '教练管理', icon: '👨‍🏫', roles: [1, 2, 3] }
+      },
+      {
+        path: 'assign',
+        name: 'Assign',
+        component: () => import('@/views/Assign.vue'),
+        meta: { title: '分配管理', icon: '🎯', roles: [1] }
+      },
+      {
+        path: 'progress',
+        name: 'Progress',
+        component: () => import('@/views/Progress.vue'),
+        meta: { title: '学习进度', icon: '📚', roles: [1, 2, 3] }
+      },
+      {
+        path: 'exam',
+        name: 'Exam',
+        component: () => import('@/views/Exam.vue'),
+        meta: { title: '考试管理', icon: '🏆', roles: [1, 3] }
+      },
+      {
+        path: 'baseinfo',
+        name: 'BaseInfo',
+        component: () => import('@/views/BaseInfo.vue'),
+        meta: { title: '基础信息', icon: '⚙️', roles: [1] }
+      },
+      {
+        path: 'users',
+        name: 'UserManage',
+        component: () => import('@/views/UserManage.vue'),
+        meta: { title: '用户管理', icon: '👥', roles: [1] }
+      },
+    ]
   },
   { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
@@ -26,67 +76,30 @@ const router = createRouter({
   routes,
 })
 
-// 路由加载标识，防止重复请求
-let isRoutesLoaded = false
-
-router.beforeEach(async (to, _from, next) => {
+router.beforeEach((to, _from, next) => {
   const userStore = useUserStore()
 
-  // 1. 未登录处理
+  // 1. 需要认证但未登录 → 跳转登录页
   if (to.meta.requiresAuth && !userStore.token) {
     return next('/login')
   }
 
-  // 2. 已登录且未加载动态路由
-  if (userStore.token && !isRoutesLoaded) {
-    try {
-      const res: any = await getMyRoutes()
-      const menus = res.data || []
-      userStore.setMenus(menus) // 保存到 Store
-      
-      menus.forEach((menu: any) => {
-        let componentPath = ''
-        if (menu.component.includes('Dashboard')) componentPath = '/src/views/Dashboard.vue'
-        else if (menu.component.includes('UserManage')) componentPath = '/src/views/UserManage.vue'
-        else if (menu.component.includes('Enrollment') || menu.component.includes('Registration')) componentPath = '/src/views/Registration.vue'
-        else if (menu.component.includes('Coach') || menu.component.includes('AssignInstructor')) componentPath = '/src/views/Coach.vue'
-        else if (menu.component.includes('Progress')) componentPath = '/src/views/Progress.vue'
-        else if (menu.component.includes('Exam')) componentPath = '/src/views/Exam.vue'
-        else if (menu.component.includes('BaseInfo')) componentPath = '/src/views/BaseInfo.vue'
-
-        if (views[componentPath]) {
-          router.addRoute('Layout', {
-            path: menu.path.replace('/admin/', '').replace('/student/', '').replace('/instructor/', ''),
-            name: menu.menuName,
-            component: views[componentPath],
-            meta: { title: menu.menuName, icon: menu.icon || '📍' }
-          })
-        }
-      })
-
-      isRoutesLoaded = true
-      // 动态添加完路由后，必须用 next(to.fullPath) 触发一次重新匹配，否则当前导航会失败
-      return next({ ...to, replace: true })
-    } catch (e) {
-      console.error('动态路由加载失败:', e)
-      userStore.clearUser()
-      return next('/login')
-    }
-  }
-
-  // 3. 登录页重复进入处理
+  // 2. 已登录时访问登录/注册页 → 跳转工作台
   if (userStore.token && (to.path === '/login' || to.path === '/register' || to.path === '/')) {
     return next('/app/dashboard')
   }
 
+  // 3. 权限检查：如果路由定义了 roles，检查当前用户角色是否在允许列表中
+  const roles = to.meta.roles as number[] | undefined
+  if (roles && userStore.token) {
+    const userRole = Number(userStore.role)
+    if (!roles.includes(userRole)) {
+      message.warning('您没有权限访问该页面')
+      return next('/app/dashboard')
+    }
+  }
+
   next()
 })
-
-/**
- * 退出登录时调用，重置加载标识
- */
-export function resetRouter() {
-  isRoutesLoaded = false
-}
 
 export default router

@@ -6,7 +6,7 @@
         {{ collapsed ? '🚗' : '🚗 DMS' }}
       </div>
       <a-menu theme="dark" mode="inline" :selectedKeys="selectedKeys" @click="handleMenuClick">
-        <a-menu-item v-for="route in menuRoutes" :key="route.path">
+        <a-menu-item v-for="route in visibleMenus" :key="route.path">
           <span>{{ route.meta?.icon }}</span>
           <span>{{ route.meta?.title }}</span>
         </a-menu-item>
@@ -38,19 +38,30 @@ import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { logout } from '@/api/auth'
 import { useUserStore } from '@/store/user'
-import { resetRouter } from '@/router'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const collapsed = ref(false)
 
-// 侧边栏菜单项（基于从 Store 获取的 menuList）
-const menuRoutes = computed(() => {
-  return userStore.menuList.map(menu => ({
-    path: menu.path.replace('/admin/', '').replace('/student/', '').replace('/instructor/', ''),
-    meta: { title: menu.menuName, icon: menu.icon || '📍' }
-  }))
+/**
+ * 根据当前用户角色过滤可见的菜单项
+ * 从 Layout 路由的 children 中读取，只显示 meta.roles 包含当前角色的路由
+ */
+const visibleMenus = computed(() => {
+  const layoutRoute = router.getRoutes().find(r => r.name === 'Layout')
+  if (!layoutRoute) return []
+
+  const userRole = Number(userStore.role)
+  return layoutRoute.children
+    .filter(child => {
+      const roles = child.meta?.roles as number[] | undefined
+      return roles ? roles.includes(userRole) : true
+    })
+    .map(child => ({
+      path: child.path,
+      meta: child.meta
+    }))
 })
 
 // 当前选中的菜单
@@ -76,7 +87,6 @@ async function handleLogout() {
   } catch {
   }
   userStore.clearUser()
-  resetRouter() // 重置路由加载标识
   message.success('已退出登录')
   router.push('/')
 }

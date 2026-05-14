@@ -11,36 +11,7 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ----------------------------
--- 1. 菜单与路由权限表
--- ----------------------------
-DROP TABLE IF EXISTS `sys_menus`;
-CREATE TABLE `sys_menus` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
-  `parent_id` bigint(20) DEFAULT '0' COMMENT '父菜单ID',
-  `menu_name` varchar(50) NOT NULL COMMENT '菜单/路由名称',
-  `path` varchar(255) DEFAULT NULL COMMENT '前端路由地址',
-  `component` varchar(255) DEFAULT NULL COMMENT '前端组件路径',
-  `perms` varchar(100) DEFAULT NULL COMMENT '权限标识',
-  `menu_type` char(1) NOT NULL COMMENT '类型: M-目录, C-菜单, F-按钮',
-  `icon` varchar(100) DEFAULT NULL COMMENT '菜单图标',
-  `sort_order` int(11) DEFAULT '0' COMMENT '排序号',
-  `status` tinyint(4) DEFAULT '1' COMMENT '状态: 1-正常, 0-停用',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='菜单与路由权限表';
-
--- 插入菜单样例数据
-INSERT INTO `sys_menus` VALUES
-(1, 0, '管理控制台', '/admin/dashboard', 'views/admin/Dashboard', NULL, 'C', 'dashboard', 1, 1),
-(2, 0, '报名资料审核', '/admin/audit/enrollment', 'views/admin/AuditEnrollment', 'admin:audit', 'C', 'audit', 2, 1),
-(3, 0, '教练分配管理', '/admin/assign/instructor', 'views/admin/AssignInstructor', 'admin:assign', 'C', 'team', 3, 1),
-(4, 0, '学员工作台', '/student/dashboard', 'views/student/Dashboard', NULL, 'C', 'user-dashboard', 1, 1),
-(5, 0, '在线报名', '/student/enrollment', 'views/student/Enrollment', 'student:enroll', 'C', 'form', 2, 1),
-(6, 0, '教练工作台', '/instructor/dashboard', 'views/instructor/Dashboard', NULL, 'C', 'coach-dashboard', 1, 1),
-(7, 0, '我的学员', '/instructor/students', 'views/instructor/Students', 'instructor:students', 'C', 'users', 2, 1),
-(8, 0, '用户管理', '/admin/users', 'views/UserManage', 'admin:user:manage', 'C', 'team', 4, 1);
-
--- ----------------------------
--- 2. 角色表
+-- 1. 角色表
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_roles`;
 CREATE TABLE `sys_roles` (
@@ -58,23 +29,7 @@ INSERT INTO `sys_roles` VALUES
 (3, '学员', 'student', '报名学员');
 
 -- ----------------------------
--- 3. 角色-菜单关联表
--- ----------------------------
-DROP TABLE IF EXISTS `sys_role_menus`;
-CREATE TABLE `sys_role_menus` (
-  `role_id` bigint(20) NOT NULL COMMENT '角色ID',
-  `menu_id` bigint(20) NOT NULL COMMENT '菜单ID',
-  PRIMARY KEY (`role_id`,`menu_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色-菜单关联表';
-
--- 插入关联数据
-INSERT INTO `sys_role_menus` VALUES
-(1, 1), (1, 2), (1, 3), (1, 8), -- 管理员权限 (增加了8：用户管理)
-(3, 4), (3, 5),         -- 学员权限
-(2, 6), (2, 7);         -- 教练员权限
-
--- ----------------------------
--- 4. 用户基础表
+-- 2. 用户基础表
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_users`;
 CREATE TABLE `sys_users` (
@@ -96,7 +51,7 @@ INSERT INTO `sys_users` VALUES
 (3, 'student_li', MD5('Aq123456'), '13900000003', 1, NOW());
 
 -- ----------------------------
--- 5. 用户-角色关联表
+-- 3. 用户-角色关联表
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_user_roles`;
 CREATE TABLE `sys_user_roles` (
@@ -112,7 +67,7 @@ INSERT INTO `sys_user_roles` VALUES
 (3, 3); -- student_li -> 学员
 
 -- ----------------------------
--- 6. 教练员信息表
+-- 4. 教练员信息表
 -- ----------------------------
 DROP TABLE IF EXISTS `biz_instructors`;
 CREATE TABLE `biz_instructors` (
@@ -129,7 +84,7 @@ INSERT INTO `biz_instructors` VALUES
 (1, 2, '张教练', '13800000002', 'C1', 1);
 
 -- ----------------------------
--- 7. 学员信息表
+-- 5. 学员信息表
 -- ----------------------------
 DROP TABLE IF EXISTS `biz_students`;
 CREATE TABLE `biz_students` (
@@ -150,7 +105,7 @@ INSERT INTO `biz_students` VALUES
 (1, 3, '李学员', '110105199001011234', '13900000003', 'C1', 1, '希望教练脾气好一点，周末练车', 2);
 
 -- ----------------------------
--- 8. 报名材料及审核表
+-- 6. 报名材料及审核表
 -- ----------------------------
 DROP TABLE IF EXISTS `biz_enrollments`;
 CREATE TABLE `biz_enrollments` (
@@ -169,7 +124,7 @@ INSERT INTO `biz_enrollments` VALUES
 (1, 1, '/uploads/id_front.jpg', '/uploads/id_back.jpg', '/uploads/health.jpg', 1, '材料齐全，审核通过', 1);
 
 -- ----------------------------
--- 9. 系统生成文档表
+-- 7. 系统生成文档表
 -- ----------------------------
 DROP TABLE IF EXISTS `biz_generated_documents`;
 CREATE TABLE `biz_generated_documents` (
@@ -184,7 +139,7 @@ INSERT INTO `biz_generated_documents` VALUES
 (1, 1, 'EnrollmentForm', '/docs/enrollment_form_stu1.pdf');
 
 -- ----------------------------
--- 10. 学员学习进度表
+-- 8. 学员学习进度表
 -- ----------------------------
 DROP TABLE IF EXISTS `biz_learning_progress`;
 CREATE TABLE `biz_learning_progress` (
@@ -201,7 +156,7 @@ INSERT INTO `biz_learning_progress` VALUES
 (2, 1, 2, 8, 1);  -- 李学员科二进行中 (8学时)
 
 -- ----------------------------
--- 11. 考试报名及成绩表
+-- 9. 考试报名及成绩表
 -- ----------------------------
 DROP TABLE IF EXISTS `biz_exams`;
 CREATE TABLE `biz_exams` (
@@ -219,7 +174,7 @@ INSERT INTO `biz_exams` VALUES
 (1, 1, 1, '2026-05-10', '市第一车辆管理所考场', 2, 98); -- 科目一考了98分
 
 -- ----------------------------
--- 12. 基础信息字典表
+-- 10. 基础信息字典表
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_dict`;
 CREATE TABLE `sys_dict` (
