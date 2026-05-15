@@ -24,9 +24,10 @@
         </template>
 
         <template v-else-if="column.key === 'action'">
-          <a-button type="link" @click="showRoleModal(record)">
+          <a-button type="link" @click="showRoleModal(record)" v-if="record.roleCode !== 'admin'">
             分配角色
           </a-button>
+          <span v-else style="color: #bfbfbf; font-size: 12px; margin-left: 15px;">系统保护</span>
         </template>
       </template>
     </a-table>
@@ -44,7 +45,7 @@
         </a-form-item>
         <a-form-item label="目标角色" required>
           <a-select v-model:value="selectedRoleId" placeholder="请选择新角色">
-            <a-select-option :value="1">管理员</a-select-option>
+            <a-select-option :value="1" disabled>管理员 (不可分配)</a-select-option>
             <a-select-option :value="2">教练员</a-select-option>
             <a-select-option :value="3">学员</a-select-option>
           </a-select>

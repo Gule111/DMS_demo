@@ -85,10 +85,16 @@ const routes = [
         meta: { title: '分配管理', roles: [1] }
       },
       {
+        path: 'statistics',
+        name: 'Statistics',
+        component: () => import('@/views/Statistics.vue'),
+        meta: { title: '统计分析', roles: [1] }
+      },
+      {
         path: 'progress',
         name: 'Progress',
         component: () => import('@/views/Progress.vue'),
-        meta: { title: '学习进度', roles: [1, 3] }
+        meta: { title: '学习进度', roles: [3] }
       },
       {
         path: 'exam',

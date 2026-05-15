@@ -1,8 +1,13 @@
 <template>
   <div class="progress-container">
-    <a-card title="📊 学习进度追踪" :bordered="false" class="main-card">
+    <a-page-header title="学习进度追踪" sub-title="实时同步练车学时与考试状态" />
+
+    <a-card :bordered="false" class="main-card">
       <template #extra>
-        <a-tag color="blue">当前等级: {{ studentLevel }}</a-tag>
+        <div class="level-badge">
+          <span class="label">当前等级:</span>
+          <a-tag color="blue">{{ studentLevel }}</a-tag>
+        </div>
       </template>
 
       <!-- 步骤条：展示四个科目阶段 -->
@@ -19,23 +24,52 @@
 
       <!-- 详细学时进度 -->
       <div class="progress-details">
-        <a-row :gutter="24">
-          <a-col :span="12" v-for="item in progressList" :key="item.subject">
-            <div class="subject-card">
+        <a-row :gutter="[24, 24]">
+          <a-col :xs="24" :sm="12" v-for="item in progressList" :key="item.subject">
+            <div class="subject-card" :class="{ 'card-locked': isLocked(item.subject) }">
               <div class="subject-header">
-                <span class="subject-title">科目 {{ subjectMap[item.subject] }}</span>
+                <div class="title-group">
+                  <span class="subject-title">科目 {{ subjectMap[item.subject] }}</span>
+                  <span class="subject-subtitle">{{ getSubjectSubtitle(item.subject) }}</span>
+                </div>
                 <a-tag :color="statusMap[item.status].color">{{ statusMap[item.status].text }}</a-tag>
               </div>
-              <div class="progress-bar-wrapper">
-                <div class="progress-info">
-                  <span>已累计学时: {{ item.hoursDone }} / {{ requiredHours[item.subject] }}h</span>
-                  <span>{{ Math.round((item.hoursDone / requiredHours[item.subject]) * 100) }}%</span>
+              
+              <div class="progress-body">
+                <!-- 实操科目显示进度条 -->
+                <div class="progress-bar-wrapper" v-if="item.subject === 2 || item.subject === 3">
+                  <div class="progress-info">
+                    <span>已累计学时: <b>{{ item.hoursDone }}</b> / {{ requiredHours[item.subject] }}h</span>
+                    <span class="percent">{{ Math.round((item.hoursDone / requiredHours[item.subject]) * 100) }}%</span>
+                  </div>
+                  <a-progress 
+                    :percent="Math.min(100, Math.round((item.hoursDone / requiredHours[item.subject]) * 100))" 
+                    :status="item.status === 2 ? 'success' : (isLocked(item.subject) ? 'normal' : 'active')"
+                    :stroke-color="isLocked(item.subject) ? '#d9d9d9' : ''"
+                    :show-info="false"
+                  />
                 </div>
-                <a-progress 
-                  :percent="Math.min(100, Math.round((item.hoursDone / requiredHours[item.subject]) * 100))" 
-                  :status="item.status === 2 ? 'success' : 'active'"
-                  :show-info="false"
-                />
+                
+                <!-- 理论科目显示提示文本 -->
+                <div class="theory-hint" v-else>
+                  <a-alert message="不计学时，直接联系预约考试" type="info" ghost />
+                </div>
+
+                <div class="exam-info" v-if="item.latestScore !== null">
+                  <span class="exam-label">最近成绩:</span>
+                  <span class="exam-score" :class="item.latestScore >= 90 ? 'pass' : 'fail'">{{ item.latestScore }} 分</span>
+                </div>
+                <div class="exam-info" v-else-if="item.status === 1">
+                  <span class="exam-label">考试状态:</span>
+                  <span class="exam-status-hint">学时已达标，可预约考试</span>
+                </div>
+              </div>
+              
+              <div class="lock-overlay" v-if="isLocked(item.subject)">
+                <div class="lock-content">
+                  <span class="lock-icon">🔒</span>
+                  <p>前一科目通过后解锁</p>
+                </div>
               </div>
             </div>
           </a-col>
@@ -44,23 +78,25 @@
     </a-card>
 
     <!-- 训练记录时间线 -->
-    <a-card title="🕒 最近训练记录" :bordered="false" style="margin-top: 24px;">
+    <a-card title="🚗 最近训练记录" :bordered="false" style="margin-top: 24px;" class="record-card">
       <a-empty v-if="records.length === 0" description="暂无训练记录" />
-      <a-timeline v-else mode="alternate">
-        <a-timeline-item v-for="record in records" :key="record.id" :color="record.hours >= 2 ? 'green' : 'blue'">
-          <template #dot>
-            <span style="font-size: 16px;">🚗</span>
-          </template>
-          <div class="record-item">
-            <div class="record-date">{{ formatDate(record.trainingDate) }}</div>
-            <div class="record-content">
-              <strong>科目 {{ subjectMap[record.subject] }} 训练</strong>
-              <span class="record-hours">+{{ record.hours }} 学时</span>
+      <div class="timeline-container" v-else>
+        <a-timeline mode="alternate">
+          <a-timeline-item v-for="record in records" :key="record.id" :color="record.hours >= 2 ? 'green' : 'blue'">
+            <template #dot>
+              <div class="custom-dot"><div class="dot-inner"></div></div>
+            </template>
+            <div class="record-item">
+              <div class="record-date">{{ formatDate(record.trainingDate) }}</div>
+              <div class="record-header">
+                <span class="record-subject">科目 {{ subjectMap[record.subject] }} 训练</span>
+                <span class="record-hours">+{{ record.hours }}h</span>
+              </div>
+              <div class="record-content">{{ record.content || '常规基础驾驶训练' }}</div>
             </div>
-            <p class="record-desc">{{ record.content || '教练未填写评价' }}</p>
-          </div>
-        </a-timeline-item>
-      </a-timeline>
+          </a-timeline-item>
+        </a-timeline>
+      </div>
     </a-card>
   </div>
 </template>
@@ -77,12 +113,24 @@ const subjectMap: any = { 1: '一', 2: '二', 3: '三', 4: '四' }
 const requiredHours: any = { 1: 12, 2: 16, 3: 24, 4: 10 }
 const statusMap: any = {
   0: { text: '学习中', color: 'blue' },
-  1: { text: '已达标', color: 'orange' },
+  1: { text: '学时达标', color: 'orange' },
   2: { text: '已通过', color: 'green' }
 }
 
-// 计算当前进行到哪一步
+const getSubjectSubtitle = (subject: number) => {
+  const subtitles: any = { 1: '理论知识', 2: '场地驾驶', 3: '道路驾驶', 4: '文明驾驶' }
+  return subtitles[subject]
+}
+
+const isLocked = (subject: number) => {
+  if (subject === 1) return false
+  const prevSubject = progressList.value.find(p => p.subject === subject - 1)
+  return !prevSubject || prevSubject.status !== 2
+}
+
+// 计算当前进行到哪一步 (0-3)
 const currentStep = computed(() => {
+  // 查找第一个未通过的科目索引
   const index = progressList.value.findIndex(p => p.status !== 2)
   return index === -1 ? 4 : index
 })
@@ -95,7 +143,8 @@ const studentLevel = computed(() => {
 const fetchProgress = async () => {
   try {
     const res: any = await request.get('/progress/my')
-    progressList.value = res.data || []
+    // 确保按科目排序
+    progressList.value = (res.data || []).sort((a: any, b: any) => a.subject - b.subject)
   } catch (err) {
     console.error('获取进度失败:', err)
   }
@@ -123,65 +172,187 @@ onMounted(() => {
 <style scoped>
 .progress-container {
   padding: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 .main-card {
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+.level-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.level-badge .label {
+  color: #8c8c8c;
+  font-size: 13px;
 }
 .steps-wrapper {
-  padding: 24px 0;
+  padding: 32px 0 12px;
 }
-.progress-details {
-  margin-top: 24px;
-}
+
 .subject-card {
-  background: #f8fafc;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  border: 1px solid #e2e8f0;
+  position: relative;
+  background: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s;
+  height: 100%;
 }
+.subject-card:hover {
+  border-color: #1890ff;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.1);
+}
+
 .subject-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-start;
+  margin-bottom: 24px;
 }
 .subject-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  display: block;
 }
+.subject-subtitle {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
 .progress-info {
   display: flex;
   justify-content: space-between;
-  font-size: 14px;
-  color: #64748b;
+  align-items: flex-end;
   margin-bottom: 8px;
 }
+.progress-info b {
+  font-size: 18px;
+  color: #1890ff;
+}
+.percent {
+  font-weight: 600;
+  color: #262626;
+}
+
+.exam-info {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.exam-label {
+  color: #8c8c8c;
+  font-size: 13px;
+}
+.exam-score {
+  font-size: 18px;
+  font-weight: 700;
+}
+.exam-score.pass { color: #52c41a; }
+.exam-score.fail { color: #ff4d4f; }
+.exam-status-hint {
+  color: #fa8c16;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.theory-hint {
+  margin-bottom: 24px;
+}
+.theory-hint :deep(.ant-alert) {
+  padding: 8px 12px;
+  background-color: #f0f5ff;
+  border: 1px solid #adc6ff;
+}
+.theory-hint :deep(.ant-alert-message) {
+  font-size: 13px;
+  color: #1d39c4;
+}
+
+/* 锁定状态样式 */
+.card-locked {
+  background: #fafafa;
+  filter: grayscale(0.8);
+  opacity: 0.8;
+}
+.lock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  z-index: 10;
+}
+.lock-content {
+  text-align: center;
+  color: #bfbfbf;
+}
+.lock-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* 时间线样式 */
+.record-card {
+  border-radius: 12px;
+}
+.timeline-container {
+  padding: 24px 0;
+}
+.custom-dot {
+  width: 20px;
+  height: 20px;
+  background: #e6f7ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dot-inner {
+  width: 8px;
+  height: 8px;
+  background: #1890ff;
+  border-radius: 50%;
+}
 .record-item {
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 8px;
   text-align: left;
 }
 .record-date {
   font-size: 12px;
-  color: #94a3b8;
+  color: #8c8c8c;
+  margin-bottom: 4px;
 }
-.record-content {
+.record-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 4px 0;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.record-subject {
+  font-weight: 600;
+  color: #262626;
 }
 .record-hours {
-  background: #f1f5f9;
-  padding: 2px 8px;
-  border-radius: 4px;
-  color: #3b82f6;
-  font-weight: 500;
+  color: #1890ff;
+  font-weight: 700;
 }
-.record-desc {
-  color: #64748b;
-  font-style: italic;
+.record-content {
+  color: #595959;
   font-size: 13px;
+  line-height: 1.5;
 }
 </style>

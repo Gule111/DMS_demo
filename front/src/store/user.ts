@@ -57,5 +57,5 @@ export const useUserStore = defineStore('user', () => {
     return '普通用户'
   }
 
-  return { token, userId, username, role, phone, setUser, clearUser, getRoleName }
+  return { token, refreshToken, userId, username, role, phone, setUser, clearUser, getRoleName }
 })

@@ -53,7 +53,7 @@
         <a-tab-pane key="roster" tab="学员名册">
           <a-card class="module-card">
             <div class="search-bar">
-              <a-input-search v-model:value="rosterSearch" placeholder="搜索学员姓名/电话" @search="filterStudents" />
+              <a-input-search v-model:value="rosterSearch" placeholder="搜索学员姓名/电话" />
             </div>
             <a-list :loading="studentsLoading" :data-source="filteredStudents" :pagination="{ pageSize: 10 }">
               <template #renderItem="{ item }">
@@ -224,7 +224,7 @@ const rosterSearch = ref('')
 const filteredStudents = computed(() => {
   if (!rosterSearch.value) return coachStudents.value
   return coachStudents.value.filter(s => 
-    s.realName.includes(rosterSearch.value) || s.phone.includes(rosterSearch.value)
+    s.realName?.includes(rosterSearch.value) || s.phone?.includes(rosterSearch.value)
   )
 })
 const getStudentStatusText = (status: number) => {

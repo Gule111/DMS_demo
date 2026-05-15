@@ -27,7 +27,7 @@ public class ProgressController {
      * 学员端：获取自己的学习进度
      */
     @GetMapping("/my")
-    public Result<List<LearningProgress>> getMyProgress() {
+    public Result<List<com.dms.dto.LearningProgressDTO>> getMyProgress() {
         try {
             Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             return Result.success(progressService.getStudentProgress(userId));

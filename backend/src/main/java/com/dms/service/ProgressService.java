@@ -39,16 +39,27 @@ public class ProgressService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void recordExamResult(Long studentId, Integer subject, Integer score, String remark) {
-        // 1. 保存或更新考试记录
+        // 如果是从 ExamService 过来的，可能已经有 Exam 记录了。
+        // 这里我们默认该方法用于“手动录入/补录”，所以还是保留插入逻辑，但如果是官方考试流程，我们会另行处理。
+        // 为了兼容性，我们保留原样，但在 ExamService 中我们直接调用 progress 逻辑。
+        
+        // 1. 保存或更新考试记录 (仅当没有传入已有 Exam ID 时，这里我们保持原样)
         Exam exam = new Exam();
         exam.setStudentId(studentId);
         exam.setSubject(subject);
         exam.setScore(score);
         exam.setExamDate(new Date());
         exam.setStatus(2); // 已完成
-        exam.setExamSite("模拟考/校内考"); // 默认值
+        exam.setExamSite("模拟考/校内考"); 
         examMapper.insert(exam);
 
+        updateProgressByExam(studentId, subject, score);
+    }
+
+    /**
+     * 核心逻辑：根据考试成绩更新科目进度与学员状态
+     */
+    public void updateProgressByExam(Long studentId, Integer subject, Integer score) {
         // 2. 如果分数合格，更新学习进度状态为“已通过 (2)”
         // 科目一和科目四 90分合格，科目二和科目三 80分合格 (假设)
         boolean passed = false;
@@ -91,12 +102,46 @@ public class ProgressService {
     }
 
     /**
-     * 获取学员完整进度
+     * 获取学员完整进度 (确保返回 1-4 科目完整列表，并附带成绩)
      */
-    public List<LearningProgress> getStudentProgress(Long userId) {
+    public List<com.dms.dto.LearningProgressDTO> getStudentProgress(Long userId) {
         Student student = studentMapper.selectOne(new QueryWrapper<Student>().eq("user_id", userId));
         if (student == null) return List.of();
-        return progressMapper.selectByStudentId(student.getId());
+        
+        List<LearningProgress> dbList = progressMapper.selectByStudentId(student.getId());
+        List<Exam> examList = examMapper.selectByStudentId(student.getId());
+        
+        java.util.List<com.dms.dto.LearningProgressDTO> fullList = new java.util.ArrayList<>();
+        for (int i = 1; i <= 4; i++) {
+            final int subject = i;
+            
+            LearningProgress dbProgress = dbList.stream()
+                .filter(p -> p.getSubject() == subject)
+                .findFirst()
+                .orElse(null);
+                
+            com.dms.dto.LearningProgressDTO dto = new com.dms.dto.LearningProgressDTO();
+            dto.setStudentId(student.getId());
+            dto.setSubject(subject);
+            
+            if (dbProgress != null) {
+                dto.setId(dbProgress.getId());
+                dto.setHoursDone(dbProgress.getHoursDone());
+                dto.setStatus(dbProgress.getStatus());
+            } else {
+                dto.setHoursDone(0);
+                dto.setStatus(0);
+            }
+            
+            // 查找最新成绩 (examList 已经按日期 DESC 排序)
+            examList.stream()
+                .filter(e -> e.getSubject() == subject && e.getScore() != null)
+                .findFirst()
+                .ifPresent(e -> dto.setLatestScore(e.getScore()));
+                
+            fullList.add(dto);
+        }
+        return fullList;
     }
 
     /**
@@ -114,10 +159,23 @@ public class ProgressService {
         record.setContent(content);
         recordMapper.insert(record);
 
-        // 2. 更新汇总进度表
-        progressMapper.addHours(studentId, subject, hours.intValue());
+        // 2. 确保汇总进度表中存在该科目的记录
+        LearningProgress progress = progressMapper.selectOne(
+            new QueryWrapper<LearningProgress>().eq("student_id", studentId).eq("subject", subject)
+        );
+        if (progress == null) {
+            progress = new LearningProgress();
+            progress.setStudentId(studentId);
+            progress.setSubject(subject);
+            progress.setHoursDone(hours.intValue());
+            progress.setStatus(0);
+            progressMapper.insert(progress);
+        } else {
+            // 更新汇总进度表
+            progressMapper.addHours(studentId, subject, hours.intValue());
+        }
         
-        // 3. 检查是否达到学时标准
+        // 3. 检查是否达到学时标准 (重新查询最新学时以确保准确)
         checkAndUpdateStatus(studentId, subject);
     }
 
@@ -128,10 +186,10 @@ public class ProgressService {
         if (progress == null) return;
 
         int requiredHours = switch (subject) {
-            case 1 -> 12;
+            case 1 -> 0;  // 理论课，无需强制实操学时
             case 2 -> 16;
             case 3 -> 24;
-            case 4 -> 10;
+            case 4 -> 0;  // 理论课，无需强制实操学时
             default -> 0;
         };
 
