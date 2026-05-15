@@ -19,4 +19,10 @@ public interface StudentMapper extends BaseMapper<Student> {
      */
     @Update("UPDATE biz_students SET instructor_id = NULL, status = 1 WHERE instructor_id = #{instructorId}")
     void unbindStudentsByInstructor(Long instructorId);
+
+    @Update("UPDATE biz_students SET instructor_id = #{instructorId} WHERE id = #{studentId}")
+    void bindInstructor(Long studentId, Long instructorId);
+
+    @Update("UPDATE biz_students SET status = #{status} WHERE id = #{id}")
+    void updateStatus(Long id, Integer status);
 }

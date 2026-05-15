@@ -27,6 +27,8 @@ public class AuthService {
 
     @Value("${dms.redis.token-key-prefix}")
     private String tokenKeyPrefix;
+    
+    private final String refreshTokenKeyPrefix = "dms:refresh_token:";
 
     public AuthService(UserMapper userMapper, SmsCodeService smsCodeService,
                        JwtUtils jwtUtils, StringRedisTemplate redisTemplate) {
@@ -75,20 +77,25 @@ public class AuthService {
             roleId = 3; // 默认学员
         }
 
-        // 4. 生成 JWT Token
-        String token = jwtUtils.generateToken(user.getId(), user.getUsername(), roleId);
+        // 4. 生成双 Token (Access + Refresh)
+        String accessToken = jwtUtils.generateToken(user.getId(), user.getUsername(), roleId);
+        String refreshToken = jwtUtils.generateRefreshToken(user.getId(), user.getUsername(), roleId);
 
-        // 5. 将 Token 存入 Redis（用于主动注销和续期管理）
-        String redisKey = tokenKeyPrefix + user.getId();
-        redisTemplate.opsForValue().set(redisKey, token,
+        // 5. 将 Token 存入 Redis
+        // Access Token 存入（主要用于主动注销检查）
+        redisTemplate.opsForValue().set(tokenKeyPrefix + user.getId(), accessToken,
                 jwtUtils.getExpiration(), TimeUnit.MILLISECONDS);
+        // Refresh Token 存入
+        redisTemplate.opsForValue().set(refreshTokenKeyPrefix + user.getId(), refreshToken,
+                7, TimeUnit.DAYS);
 
         // 6. 组装返回信息
         Map<String, Object> result = new HashMap<>();
-        result.put("token", token);
+        result.put("token", accessToken);
+        result.put("refreshToken", refreshToken);
         result.put("userId", user.getId());
         result.put("username", user.getUsername());
-        result.put("role", roleId); // 返回数字 ID: 1, 2, 3
+        result.put("role", roleId); 
         result.put("phone", user.getPhone());
 
         return result;
@@ -128,17 +135,20 @@ public class AuthService {
         String fakeIdCard = "ID" + System.currentTimeMillis();
         userMapper.insertBizStudent(user.getId(), username, fakeIdCard, phone);
 
-        // 6. 注册成功后自动登录，生成 Token (3为学员角色ID)
-        String token = jwtUtils.generateToken(user.getId(), user.getUsername(), 3);
+        // 6. 生成双 Token (3为学员角色ID)
+        String accessToken = jwtUtils.generateToken(user.getId(), user.getUsername(), 3);
+        String refreshToken = jwtUtils.generateRefreshToken(user.getId(), user.getUsername(), 3);
 
         // 7. Token 存入 Redis
-        String redisKey = tokenKeyPrefix + user.getId();
-        redisTemplate.opsForValue().set(redisKey, token,
+        redisTemplate.opsForValue().set(tokenKeyPrefix + user.getId(), accessToken,
                 jwtUtils.getExpiration(), TimeUnit.MILLISECONDS);
+        redisTemplate.opsForValue().set(refreshTokenKeyPrefix + user.getId(), refreshToken,
+                7, TimeUnit.DAYS);
 
         // 8. 组装返回信息
         Map<String, Object> result = new HashMap<>();
-        result.put("token", token);
+        result.put("token", accessToken);
+        result.put("refreshToken", refreshToken);
         result.put("userId", user.getId());
         result.put("username", user.getUsername());
         result.put("role", 3); // 3 代表学员
@@ -158,11 +168,37 @@ public class AuthService {
     }
 
     /**
+     * 刷新 Token 逻辑
+     */
+    public String refreshToken(String refreshToken) {
+        // 1. 验证 Refresh Token 格式与是否过期
+        if (jwtUtils.isTokenExpired(refreshToken)) {
+            throw new RuntimeException("Refresh Token 已过期，请重新登录");
+        }
+
+        // 2. 解析用户信息
+        Long userId = jwtUtils.getUserId(refreshToken);
+        String username = jwtUtils.getUsername(refreshToken);
+        Integer role = jwtUtils.getRole(refreshToken);
+
+        // 3. 校验 Redis 中的 Refresh Token 是否一致（防止重复利用或注销失效）
+        String cachedRefreshToken = redisTemplate.opsForValue().get(refreshTokenKeyPrefix + userId);
+        if (cachedRefreshToken == null || !cachedRefreshToken.equals(refreshToken)) {
+            throw new RuntimeException("Refresh Token 无效或已在别处登录");
+        }
+
+        // 4. 生成新的 Access Token
+        String newAccessToken = jwtUtils.generateToken(userId, username, role);
+
+        // 5. 更新 Redis 中的 Access Token (可选，取决于注销策略)
+        redisTemplate.opsForValue().set(tokenKeyPrefix + userId, newAccessToken,
+                jwtUtils.getExpiration(), TimeUnit.MILLISECONDS);
+
+        return newAccessToken;
+    }
+
+    /**
      * 检查 Token 在 Redis 中是否仍然有效（未被主动注销）
-     *
-     * @param userId 用户ID
-     * @param token  JWT Token
-     * @return true=有效, false=已注销
      */
     public boolean isTokenValid(Long userId, String token) {
         String redisKey = tokenKeyPrefix + userId;

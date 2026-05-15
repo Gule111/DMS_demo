@@ -39,8 +39,9 @@ mybatis-plus:
 dms:
   jwt:
     secret: ${JWT_SECRET}
-    # Token expiration in ms (24h)
-    expiration: 86400000
+    # Token expiration: Access Token (2h), Refresh Token (7d)
+    expiration: 7200000
+    refresh-expiration: 604800000
   redis:
     quota-key-prefix: "dms:quota:"
     token-key-prefix: "dms:token:"

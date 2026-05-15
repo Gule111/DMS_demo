@@ -3,11 +3,10 @@
     <!-- 侧边栏 -->
     <a-layout-sider v-model:collapsed="collapsed" collapsible theme="dark">
       <div style="height: 48px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: bold; margin: 8px 0;">
-        {{ collapsed ? '🚗' : '🚗 DMS' }}
+        {{ collapsed ? 'D' : 'DMS 管理系统' }}
       </div>
       <a-menu theme="dark" mode="inline" :selectedKeys="selectedKeys" @click="handleMenuClick">
         <a-menu-item v-for="route in visibleMenus" :key="route.path">
-          <span>{{ route.meta?.icon }}</span>
           <span>{{ route.meta?.title }}</span>
         </a-menu-item>
       </a-menu>
@@ -49,14 +48,20 @@ const collapsed = ref(false)
  * 从 Layout 路由的 children 中读取，只显示 meta.roles 包含当前角色的路由
  */
 const visibleMenus = computed(() => {
-  const layoutRoute = router.getRoutes().find(r => r.name === 'Layout')
-  if (!layoutRoute) return []
-
   const userRole = Number(userStore.role)
-  return layoutRoute.children
+  
+  // 直接从路由原始配置中获取 Layout 的子路由
+  const layoutRoute = router.options.routes.find(r => r.name === 'Layout')
+  const children = layoutRoute?.children || []
+
+  return children
     .filter(child => {
+      // 过滤掉重定向路由和没有 title 的路由
+      if (child.redirect || !child.meta?.title) return false
+      
       const roles = child.meta?.roles as number[] | undefined
-      return roles ? roles.includes(userRole) : true
+      if (!roles) return true
+      return roles.includes(userRole)
     })
     .map(child => ({
       path: child.path,

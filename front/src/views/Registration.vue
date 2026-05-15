@@ -90,19 +90,65 @@
         </div>
       </div>
 
-      <!-- 第三步：提交完成/审核中 -->
+      <!-- 第三步：提交完成/审核中/结果回显 -->
       <div v-show="currentStep === 2" class="step-content">
+        <!-- 情况 A：正在审核 (0-待AI, 1-AI过待人工, 2-AI驳待人工) -->
         <a-result
+          v-if="!latestEnrollment || latestEnrollment.auditStatus === 0 || latestEnrollment.auditStatus === 1 || latestEnrollment.auditStatus === 2"
           status="info"
-          title="资料提交成功，系统正在排队审核中..."
-          sub-title="AI 智能审核通常需要 1-3 分钟，请耐心等待。"
+          :title="latestEnrollment?.auditStatus === 0 ? '资料提交成功，系统正在排队审核中...' : 'AI 初审已完成，正在等待人工确认...'"
+          sub-title="AI 初审通常需要 1-3 分钟，人工复审通常在 24 小时内完成。"
         >
           <template #icon>
-            <div class="loading-icon">🤖⏳</div>
+            <div class="loading-icon">{{ latestEnrollment?.auditStatus === 0 ? '🤖⏳' : '👮‍♂️🔍' }}</div>
           </template>
           <template #extra>
             <a-button type="primary" @click="$router.push('/app/dashboard')">返回工作台</a-button>
-            <a-button @click="refreshStatus">刷新状态</a-button>
+            <a-button @click="fetchStatus" :loading="statusLoading">刷新状态</a-button>
+          </template>
+          <div v-if="latestEnrollment?.auditStatus === 1 || latestEnrollment?.auditStatus === 2" class="ai-suggestion">
+            <a-alert :message="latestEnrollment.auditRemark" type="warning" show-icon />
+          </div>
+        </a-result>
+
+        <!-- 情况 B：终审通过 (Status 3) -->
+        <a-result
+          v-else-if="latestEnrollment.auditStatus === 3"
+          status="success"
+          title="恭喜！您的报名最终审核已通过"
+          sub-title="系统已自动生成您的电子档案，您可以现在去查看分配的教练，或者开始科目一的学习。"
+        >
+          <div class="docs-container" v-if="generatedDocs.length > 0">
+            <h3 style="margin-bottom: 16px;">📚 电子档案下载</h3>
+            <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+              <a-button 
+                v-for="doc in generatedDocs" 
+                :key="doc.id"
+                type="dashed" 
+                @click="downloadDoc(doc.fileUrl)"
+              >
+                <template #icon>📄</template>
+                {{ getDocName(doc.docType) }}
+              </a-button>
+            </div>
+          </div>
+          
+          <template #extra>
+            <a-button type="primary" @click="$router.push('/app/my-coach')">查看教练</a-button>
+            <a-button @click="$router.push('/app/dashboard')">返回工作台</a-button>
+          </template>
+        </a-result>
+
+        <!-- 情况 C：终审驳回 (Status 4) -->
+        <a-result
+          v-else-if="latestEnrollment.auditStatus === 4"
+          status="error"
+          title="报名审核未通过"
+          :sub-title="`最终处理结果：${latestEnrollment.auditRemark || '资料不符合规范'}`"
+        >
+          <template #extra>
+            <a-button type="primary" @click="handleResubmit">重新修改资料</a-button>
+            <a-button @click="$router.push('/app/dashboard')">返回工作台</a-button>
           </template>
         </a-result>
       </div>
@@ -112,7 +158,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import request from '@/utils/request'
 import { useRouter } from 'vue-router'
@@ -120,6 +166,9 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const currentStep = ref(0)
 const submitting = ref(false)
+const statusLoading = ref(false)
+const latestEnrollment = ref<any>(null)
+const generatedDocs = ref<any[]>([])
 
 // 表单数据
 const formData = ref({
@@ -131,6 +180,65 @@ const fileLists = ref({
   idCardFront: [] as any[],
   idCardBack: [] as any[],
   healthCert: [] as any[]
+})
+
+// 查询最新状态
+const fetchStatus = async () => {
+  statusLoading.value = true
+  try {
+    const res: any = await request.get('/enrollment/status')
+    latestEnrollment.value = res.data
+    
+    if (latestEnrollment.value) {
+      currentStep.value = 2
+      // 如果已通过，尝试拉取电子档案
+      if (latestEnrollment.value.auditStatus === 3) {
+        fetchDocs()
+      }
+    }
+  } catch (err) {
+    console.error('获取状态失败:', err)
+  } finally {
+    statusLoading.value = false
+  }
+}
+
+// 拉取电子档案列表
+const fetchDocs = async () => {
+  try {
+    const res: any = await request.get('/docs/my')
+    generatedDocs.value = res.data || []
+  } catch (err) {
+    console.error('获取电子档案失败:', err)
+  }
+}
+
+// 文档类型转中文
+const getDocName = (type: string) => {
+  const map: any = {
+    'EnrollmentForm': '机动车驾驶证申请表',
+    'HealthCert': '驾驶人身体条件证明',
+    'ExamTicket': '机动车考试准考证'
+  }
+  return map[type] || '电子档案'
+}
+
+// 下载/预览文档
+const downloadDoc = (url: string) => {
+  window.open(url, '_blank')
+}
+
+// 重新提交
+const handleResubmit = () => {
+  currentStep.value = 0
+  // 清空之前的文件（可选）
+  fileLists.value.idCardFront = []
+  fileLists.value.idCardBack = []
+  fileLists.value.healthCert = []
+}
+
+onMounted(() => {
+  fetchStatus()
 })
 
 // 阻止组件自带的上传请求，改为我们手动统一上传
@@ -174,6 +282,10 @@ const handleSubmit = async () => {
     })
     
     message.success(res.data || '提交成功')
+    // 清除旧的记录缓存，以免显示上次的驳回状态
+    latestEnrollment.value = null
+    // 拉取最新的报名记录（此时应该是待审核状态）
+    await fetchStatus()
     // 跳到审核中步骤
     currentStep.value = 2
   } catch (err: any) {
@@ -239,6 +351,14 @@ const refreshStatus = () => {
 .loading-icon {
   font-size: 64px;
   animation: pulse 2s infinite;
+}
+
+.ai-suggestion {
+  margin-top: 24px;
+  text-align: left;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 @keyframes pulse {

@@ -7,6 +7,7 @@ import { ref } from 'vue'
  */
 export const useUserStore = defineStore('user', () => {
   const token = ref<string>(localStorage.getItem('dms_token') || '')
+  const refreshToken = ref<string>(localStorage.getItem('dms_refresh_token') || '')
   const userId = ref<number>(Number(localStorage.getItem('dms_userId')) || 0)
   const username = ref<string>(localStorage.getItem('dms_username') || '')
   const role = ref<number>(Number(localStorage.getItem('dms_role')) || 0)
@@ -16,12 +17,14 @@ export const useUserStore = defineStore('user', () => {
   function setUser(data: any) {
     const r = Number(data.role)
     token.value = data.token
+    refreshToken.value = data.refreshToken
     userId.value = Number(data.userId)
     username.value = data.username
     role.value = r
     phone.value = data.phone
 
     localStorage.setItem('dms_token', data.token)
+    localStorage.setItem('dms_refresh_token', data.refreshToken || '')
     localStorage.setItem('dms_userId', String(data.userId))
     localStorage.setItem('dms_username', data.username)
     localStorage.setItem('dms_role', String(r))
@@ -31,12 +34,14 @@ export const useUserStore = defineStore('user', () => {
   /** 退出登录时清除所有用户信息 */
   function clearUser() {
     token.value = ''
+    refreshToken.value = ''
     userId.value = 0
     username.value = ''
     role.value = 0
     phone.value = ''
 
     localStorage.removeItem('dms_token')
+    localStorage.removeItem('dms_refresh_token')
     localStorage.removeItem('dms_userId')
     localStorage.removeItem('dms_username')
     localStorage.removeItem('dms_role')

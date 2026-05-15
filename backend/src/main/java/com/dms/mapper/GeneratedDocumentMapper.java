@@ -16,4 +16,10 @@ public interface GeneratedDocumentMapper extends BaseMapper<GeneratedDocument> {
     @Select("SELECT s.id, s.real_name, s.id_card, s.phone, s.license_type " +
             "FROM biz_students s WHERE s.id = #{studentId}")
     Map<String, Object> getStudentInfoForPdf(Long studentId);
+
+    @Select("SELECT id FROM biz_students WHERE user_id = #{userId}")
+    Long getStudentIdByUserId(Long userId);
+
+    @Select("SELECT * FROM biz_generated_documents WHERE student_id = #{studentId} ORDER BY id DESC")
+    java.util.List<GeneratedDocument> getDocumentsByStudentId(Long studentId);
 }

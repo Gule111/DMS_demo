@@ -23,7 +23,11 @@ public class InstructorController {
      */
     @GetMapping("/list")
     public Result<List<Instructor>> listInstructors() {
-        return Result.success(instructorService.getAllInstructors());
+        try {
+            return Result.success(instructorService.getAllInstructors());
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     @PostMapping("/add")
@@ -87,6 +91,43 @@ public class InstructorController {
     public Result<Instructor> getBestMatch(@RequestParam("licenseType") String licenseType) {
         try {
             return Result.success(instructorService.getBestInstructor(licenseType));
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 教练端：获取自己的教练信息
+     */
+    @GetMapping("/current")
+    public Result<Instructor> getCurrentInstructor() {
+        try {
+            Object principal = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            Long userId = (principal instanceof Long) ? (Long) principal : Long.parseLong(principal.toString());
+            
+            Long instructorId = instructorService.getInstructorIdByUserId(userId);
+            if (instructorId == null) {
+                return Result.error("无法获取教练身份信息，请联系管理员");
+            }
+            
+            Instructor instructor = instructorService.getAllInstructors().stream()
+                    .filter(i -> i.getId().equals(instructorId))
+                    .findFirst().orElse(null);
+            
+            return Result.success(instructor);
+        } catch (Exception e) {
+            return Result.error("身份校验异常: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 学员端：获取“我的教练”信息
+     */
+    @GetMapping("/my")
+    public Result<Instructor> getMyInstructor() {
+        try {
+            Long userId = (Long) org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            return Result.success(instructorService.getInstructorByStudentUserId(userId));
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

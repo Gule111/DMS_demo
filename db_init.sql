@@ -69,19 +69,21 @@ INSERT INTO `sys_user_roles` VALUES
 -- ----------------------------
 -- 4. 教练员信息表
 -- ----------------------------
-DROP TABLE IF EXISTS `biz_instructors`;
-CREATE TABLE `biz_instructors` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
   `user_id` bigint(20) DEFAULT NULL COMMENT '关联sys_users.id',
   `real_name` varchar(50) NOT NULL COMMENT '教练姓名',
+  `avatar` varchar(255) DEFAULT NULL COMMENT '教练头像URL',
   `phone` varchar(20) NOT NULL COMMENT '联系电话',
   `teach_type` varchar(50) DEFAULT NULL COMMENT '准教车型',
+  `experience_years` int(11) DEFAULT '0' COMMENT '教龄',
+  `intro` text DEFAULT NULL COMMENT '个人介绍',
+  `rating` decimal(3,1) DEFAULT '5.0' COMMENT '评分',
   `current_load` int(11) DEFAULT '0' COMMENT '当前带教人数',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教练员信息表';
 
 INSERT INTO `biz_instructors` VALUES
-(1, 2, '张教练', '13800000002', 'C1', 1);
+(1, 2, '张教练', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhang', '13800000002', 'C1', 8, '资深金牌教练，教学耐心，通过率高。', 4.9, 1);
 
 -- ----------------------------
 -- 5. 学员信息表
@@ -171,10 +173,26 @@ CREATE TABLE `biz_exams` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考试报名及成绩表';
 
 INSERT INTO `biz_exams` VALUES
-(1, 1, 1, '2026-05-10', '市第一车辆管理所考场', 2, 98); -- 科目一考了98分
+(1, 1, 1, '2026-05-10', '市第一车辆管理所考场', 2, 98);
 
 -- ----------------------------
--- 10. 基础信息字典表
+-- 10. 约课预约表
+-- ----------------------------
+DROP TABLE IF EXISTS `biz_appointments`;
+CREATE TABLE `biz_appointments` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `student_id` bigint(20) NOT NULL COMMENT '学员ID',
+  `instructor_id` bigint(20) NOT NULL COMMENT '教练ID',
+  `appointment_date` date NOT NULL COMMENT '预约日期',
+  `time_slot` varchar(50) NOT NULL COMMENT '时间段(如: 08:00-10:00)',
+  `subject` tinyint(4) DEFAULT '2' COMMENT '科目: 2-科目二, 3-科目三',
+  `status` tinyint(4) DEFAULT '1' COMMENT '状态: 1-已预约, 2-已完成, 3-已取消',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '预约时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='约课预约表';
+
+-- ----------------------------
+-- 11. 基础信息字典表
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_dict`;
 CREATE TABLE `sys_dict` (
@@ -190,5 +208,34 @@ INSERT INTO `sys_dict` VALUES
 (2, 'LICENSE_TYPE', 'C2', '小型自动挡汽车 C2'),
 (3, 'EXAM_SITE', 'SITE1', '市第一车辆管理所考场'),
 (4, 'EXAM_SITE', 'SITE2', '城南驾考中心');
+
+-- ----------------------------
+-- 12. 训练记录表
+-- ----------------------------
+DROP TABLE IF EXISTS `biz_training_records`;
+CREATE TABLE `biz_training_records` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `student_id` bigint(20) NOT NULL COMMENT '学员ID',
+  `instructor_id` bigint(20) NOT NULL COMMENT '教练ID',
+  `subject` tinyint(4) NOT NULL COMMENT '科目 (1-4)',
+  `training_date` date NOT NULL COMMENT '训练日期',
+  `hours` decimal(3,1) NOT NULL COMMENT '训练学时',
+  `content` text COMMENT '训练内容/教练评价',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '录入时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='训练记录表';
+
+-- ----------------------------
+-- 13. 教练档期表
+-- ----------------------------
+DROP TABLE IF EXISTS `biz_instructor_schedule`;
+CREATE TABLE `biz_instructor_schedule` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `instructor_id` bigint(20) NOT NULL COMMENT '教练ID',
+  `work_date` date NOT NULL COMMENT '日期',
+  `time_slot` varchar(20) NOT NULL COMMENT '时间段 (如: 08:00-10:00)',
+  `is_busy` tinyint(1) DEFAULT 0 COMMENT '是否忙碌 (1-忙碌, 0-空闲)',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教练档期表';
 
 SET FOREIGN_KEY_CHECKS = 1;

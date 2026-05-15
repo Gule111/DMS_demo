@@ -110,6 +110,25 @@ public class AuthController {
     }
 
     /**
+     * 刷新 Token 接口
+     * POST /auth/refresh
+     * Body: { "refreshToken": "..." }
+     */
+    @PostMapping("/refresh")
+    public Result<String> refresh(@RequestBody Map<String, String> params) {
+        String refreshToken = params.get("refreshToken");
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return Result.error("Refresh Token 不能为空");
+        }
+        try {
+            String newAccessToken = authService.refreshToken(refreshToken);
+            return Result.success(newAccessToken);
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
      * 退出登录
      * POST /auth/logout
      * 需要在请求头中携带 Authorization: Bearer {token}

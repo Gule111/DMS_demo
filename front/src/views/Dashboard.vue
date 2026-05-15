@@ -9,13 +9,14 @@
     </a-card>
 
     <!-- 快捷功能入口 -->
-    <a-row :gutter="16">
+    <a-row :gutter="[24, 24]">
       <a-col :span="6" v-for="item in shortcuts" :key="item.path">
-        <a-card hoverable @click="$router.push(item.path)">
-          <template #cover>
-            <div style="text-align: center; padding: 24px 0; font-size: 40px;">{{ item.icon }}</div>
-          </template>
-          <a-card-meta :title="item.title" :description="item.desc" />
+        <a-card hoverable class="feature-card" @click="$router.push(item.path)">
+          <div class="icon-wrapper">
+            <component :is="item.icon" />
+          </div>
+          <div class="feature-title">{{ item.title }}</div>
+          <div class="feature-desc">{{ item.desc }}</div>
         </a-card>
       </a-col>
     </a-row>
@@ -40,16 +41,19 @@
         <a-card title="我的材料" :bordered="false" class="info-card">
           <div style="display: flex; flex-direction: column; gap: 16px;">
             <div class="doc-item">
-              <span>📄 驾校报名表</span>
-              <a-button type="link" @click="handleGeneratePdf('enrollment')" :loading="generatingPdf === 'enrollment'">生成并导出</a-button>
+              <span>驾校报名表</span>
+              <a-button type="link" v-if="getDoc('EnrollmentForm')" @click="downloadDoc(getDoc('EnrollmentForm'))">导出 PDF</a-button>
+              <a-button type="link" disabled v-else>待生成</a-button>
             </div>
             <div class="doc-item">
-              <span>🏥 体检合格表</span>
-              <a-button type="link" disabled>待体检</a-button>
+              <span>体检合格表</span>
+              <a-button type="link" v-if="getDoc('HealthCert')" @click="downloadDoc(getDoc('HealthCert'))">导出 PDF</a-button>
+              <a-button type="link" disabled v-else>待生成</a-button>
             </div>
             <div class="doc-item">
-              <span>🎫 考试准考证</span>
-              <a-button type="link" disabled>暂无考试</a-button>
+              <span>考试准考证</span>
+              <a-button type="link" v-if="getDoc('ExamTicket')" @click="downloadDoc(getDoc('ExamTicket'))">导出 PDF</a-button>
+              <a-button type="link" disabled v-else>待生成</a-button>
             </div>
           </div>
         </a-card>
@@ -59,37 +63,62 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import { message } from 'ant-design-vue'
 import request from '@/utils/request'
+import { 
+  FormOutlined, 
+  TeamOutlined, 
+  ScheduleOutlined, 
+  IdcardOutlined, 
+  LineChartOutlined, 
+  SafetyCertificateOutlined 
+} from '@ant-design/icons-vue'
 
 const userStore = useUserStore()
-const generatingPdf = ref<string>('')
+const generatedDocs = ref<any[]>([])
 
-const shortcuts = [
-  { path: '/app/registration', icon: '📝', title: '在线报名', desc: '提交报名材料，快速入学' },
-  { path: '/app/coach', icon: '👨‍🏫', title: '教练分配', desc: '根据需求选择合适教练' },
-  { path: '/app/progress', icon: '📚', title: '学习进度', desc: '查看各科目学习情况' },
-  { path: '/app/exam', icon: '🏆', title: '考试管理', desc: '预约考试、查询成绩' },
-]
+const shortcuts = computed(() => {
+  const currentRole = Number(userStore.role)
+  const allShortcuts = [
+    { path: '/app/registration', title: '在线报名', desc: '提交报名材料，快速入学', icon: FormOutlined, roles: [3] },
+    { path: '/app/roster', title: '学员名册', desc: '查看名下所有学员', icon: TeamOutlined, roles: [2] },
+    { path: '/app/progress-entry', title: '进度录入', desc: '一键录入练车学时', icon: FormOutlined, roles: [2] },
+    { path: '/app/schedule', title: '约课日程', desc: '设置个人档期时间', icon: ScheduleOutlined, roles: [2] },
+    { path: '/app/feedback', title: '成绩反馈', desc: '录入考试成绩与评价', icon: SafetyCertificateOutlined, roles: [2] },
+    { path: '/app/coach', title: '教练管理', desc: '管理全校教练师资', icon: TeamOutlined, roles: [1] },
+    { path: '/app/hour-manage', title: '学时管理', desc: '管理学员练车记录', icon: ScheduleOutlined, roles: [] },
+    { path: '/app/my-coach', title: '我的教练', desc: '查看专属教练与约课', icon: IdcardOutlined, roles: [3] },
+    { path: '/app/progress', title: '学习进度', desc: '查看各科目学习情况', icon: LineChartOutlined, roles: [1, 2, 3] },
+    { path: '/app/exam', title: '考试管理', desc: '预约考试、查询成绩', icon: SafetyCertificateOutlined, roles: [1, 3] },
+  ]
+  return allShortcuts.filter(item => item.roles.includes(currentRole))
+})
 
-// 触发后端生成 PDF
-const handleGeneratePdf = async (type: string) => {
-  generatingPdf.value = type
+// 获取已生成的文档
+const fetchDocs = async () => {
   try {
-    // 目前只实现了报名表生成
-    const res: any = await request.post('/document/generate/enrollment')
-    if (res.data && res.data.fileUrl) {
-      message.success('PDF 提取成功！')
-      window.open(res.data.fileUrl, '_blank')
-    }
-  } catch (err: any) {
-    console.error('PDF生成失败:', err)
-  } finally {
-    generatingPdf.value = ''
+    const res: any = await request.get('/docs/my')
+    generatedDocs.value = res.data || []
+  } catch (err) {
+    console.error('获取材料失败:', err)
   }
 }
+
+const getDoc = (type: string) => {
+  return generatedDocs.value.find(d => d.docType === type)?.fileUrl
+}
+
+const downloadDoc = (url: string) => {
+  window.open(url, '_blank')
+}
+
+onMounted(() => {
+  if (userStore.role === 3) {
+    fetchDocs()
+  }
+})
 </script>
 
 <style scoped>
@@ -114,7 +143,18 @@ const handleGeneratePdf = async (type: string) => {
 }
 .icon-wrapper {
   font-size: 32px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  color: #1890ff;
+}
+.feature-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #262626;
+}
+.feature-desc {
+  font-size: 13px;
+  color: #8c8c8c;
 }
 .info-card {
   border-radius: 8px;

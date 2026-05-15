@@ -22,49 +22,91 @@ const routes = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/Dashboard.vue'),
-        meta: { title: '工作台', icon: '📊', roles: [1, 2, 3] }
+        meta: { title: '工作台', roles: [1, 2, 3] }
+      },
+      {
+        path: 'roster',
+        name: 'Roster',
+        component: () => import('@/views/HourManage.vue'),
+        meta: { title: '学员名册', roles: [2] }
+      },
+      {
+        path: 'progress-entry',
+        name: 'ProgressEntry',
+        component: () => import('@/views/HourManage.vue'),
+        meta: { title: '进度录入', roles: [2] }
+      },
+      {
+        path: 'schedule',
+        name: 'Schedule',
+        component: () => import('@/views/HourManage.vue'),
+        meta: { title: '约课日程', roles: [2] }
+      },
+      {
+        path: 'feedback',
+        name: 'Feedback',
+        component: () => import('@/views/HourManage.vue'),
+        meta: { title: '成绩反馈', roles: [2] }
+      },
+      {
+        path: 'audit',
+        name: 'AuditManage',
+        component: () => import('@/views/AuditManage.vue'),
+        meta: { title: '报名审核', roles: [1] }
       },
       {
         path: 'registration',
         name: 'Registration',
         component: () => import('@/views/Registration.vue'),
-        meta: { title: '在线报名', icon: '📝', roles: [1, 3] }
+        meta: { title: '在线报名', roles: [3] }
       },
       {
         path: 'coach',
         name: 'Coach',
         component: () => import('@/views/Coach.vue'),
-        meta: { title: '教练管理', icon: '👨‍🏫', roles: [1, 2, 3] }
+        meta: { title: '教练管理', roles: [1] }
+      },
+      {
+        path: 'hour-manage',
+        name: 'HourManage',
+        component: () => import('@/views/HourManage.vue'),
+        meta: { title: '学时管理', roles: [] }
+      },
+      {
+        path: 'my-coach',
+        name: 'MyCoach',
+        component: () => import('@/views/MyCoach.vue'),
+        meta: { title: '我的教练', roles: [3] }
       },
       {
         path: 'assign',
         name: 'Assign',
         component: () => import('@/views/Assign.vue'),
-        meta: { title: '分配管理', icon: '🎯', roles: [1] }
+        meta: { title: '分配管理', roles: [1] }
       },
       {
         path: 'progress',
         name: 'Progress',
         component: () => import('@/views/Progress.vue'),
-        meta: { title: '学习进度', icon: '📚', roles: [1, 2, 3] }
+        meta: { title: '学习进度', roles: [1, 3] }
       },
       {
         path: 'exam',
         name: 'Exam',
         component: () => import('@/views/Exam.vue'),
-        meta: { title: '考试管理', icon: '🏆', roles: [1, 3] }
+        meta: { title: '考试管理', roles: [1, 3] }
       },
       {
         path: 'baseinfo',
         name: 'BaseInfo',
         component: () => import('@/views/BaseInfo.vue'),
-        meta: { title: '基础信息', icon: '⚙️', roles: [1] }
+        meta: { title: '基础信息', roles: [1] }
       },
       {
         path: 'users',
         name: 'UserManage',
         component: () => import('@/views/UserManage.vue'),
-        meta: { title: '用户管理', icon: '👥', roles: [1] }
+        meta: { title: '用户管理', roles: [1] }
       },
     ]
   },

@@ -26,6 +26,9 @@ public class JwtUtils {
     @Value("${dms.jwt.expiration}")
     private long expiration;
 
+    @Value("${dms.jwt.refresh-expiration}")
+    private long refreshExpiration;
+
     private SecretKey key;
 
     @PostConstruct
@@ -36,14 +39,20 @@ public class JwtUtils {
     }
 
     /**
-     * 生成 JWT Token
-     *
-     * @param userId   用户ID
-     * @param username 用户名
-     * @param role     用户角色
-     * @return JWT Token 字符串
+     * 生成 JWT Access Token
      */
     public String generateToken(Long userId, String username, Integer role) {
+        return createToken(userId, username, role, expiration);
+    }
+
+    /**
+     * 生成 JWT Refresh Token
+     */
+    public String generateRefreshToken(Long userId, String username, Integer role) {
+        return createToken(userId, username, role, refreshExpiration);
+    }
+
+    private String createToken(Long userId, String username, Integer role, long expireTime) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("username", username);
@@ -53,7 +62,7 @@ public class JwtUtils {
                 .claims(claims)
                 .subject(String.valueOf(userId))
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .expiration(new Date(System.currentTimeMillis() + expireTime))
                 .signWith(key)
                 .compact();
     }

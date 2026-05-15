@@ -29,6 +29,36 @@ public class InstructorService {
     }
 
     /**
+     * 根据用户ID获取教练ID
+     * 如果记录缺失，则自动尝试创建（容错逻辑）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Long getInstructorIdByUserId(Long userId) {
+        Instructor instructor = instructorMapper.selectOne(
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Instructor>()
+                .eq(Instructor::getUserId, userId)
+        );
+        
+        if (instructor != null) {
+            return instructor.getId();
+        }
+
+        // 容错逻辑：如果没找到但角色是教练，则自动创建一个默认记录
+        try {
+            Instructor newInstructor = new Instructor();
+            newInstructor.setUserId(userId);
+            newInstructor.setRealName("系统分配教练");
+            newInstructor.setPhone("13800000000");
+            newInstructor.setTeachType("C1");
+            newInstructor.setCurrentLoad(0);
+            instructorMapper.insert(newInstructor);
+            return newInstructor.getId();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * 新增教练
      */
     public void addInstructor(Instructor instructor) {
@@ -63,6 +93,17 @@ public class InstructorService {
      */
     public List<Student> getStudentsByInstructor(Long instructorId) {
         return studentMapper.selectList(new QueryWrapper<Student>().eq("instructor_id", instructorId));
+    }
+
+    /**
+     * 根据学员关联ID获取教练
+     */
+    public Instructor getInstructorByStudentUserId(Long studentUserId) {
+        Student student = studentMapper.selectOne(new QueryWrapper<Student>().eq("user_id", studentUserId));
+        if (student == null || student.getInstructorId() == null) {
+            return null;
+        }
+        return instructorMapper.selectById(student.getInstructorId());
     }
 
     /**

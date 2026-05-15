@@ -56,7 +56,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/auth/sendCode",
                                 "/auth/login",
-                                "/auth/register"
+                                "/auth/register",
+                                "/auth/refresh"
                         ).permitAll()
                         // 其他所有请求需要认证
                         .anyRequest().authenticated()
