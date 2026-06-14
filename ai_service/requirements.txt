@@ -1,0 +1,12 @@
+redis
+pymysql
+python-dotenv
+fastapi
+uvicorn
+langchain
+langchain-openai
+pydantic
+requests
+chromadb
+langchain-chroma
+langchain-text-splitters

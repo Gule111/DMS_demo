@@ -37,9 +37,7 @@
           <template v-if="column.key === 'action'">
             <a-button type="link" size="small" @click="handleViewStudents(record)">查看学员</a-button>
             <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
-            <a-popconfirm title="确定要删除这个教练吗？" @confirm="handleDelete(record.id)">
-              <a-button type="link" size="small" danger>删除</a-button>
-            </a-popconfirm>
+            <a-button type="link" size="small" danger @click="confirmDelete(record)">删除</a-button>
           </template>
         </template>
       </a-table>
@@ -187,8 +185,9 @@
         </a-form-item>
         <a-form-item label="准教车型" required>
           <a-radio-group v-model:value="formData.teachType">
-            <a-radio-button value="C1">C1</a-radio-button>
-            <a-radio-button value="C2">C2</a-radio-button>
+            <a-radio-button v-for="item in licenseTypes" :key="item.id" :value="item.dictCode">
+              {{ item.dictValue }}
+            </a-radio-button>
           </a-radio-group>
         </a-form-item>
       </a-form>
@@ -201,9 +200,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue'
-import { message } from 'ant-design-vue'
-import { ReloadOutlined, PhoneOutlined } from '@ant-design/icons-vue'
+import { ref, onMounted, reactive, computed, createVNode } from 'vue'
+import { message, Modal } from 'ant-design-vue'
+import { ReloadOutlined, PhoneOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import request from '@/utils/request'
 import { useUserStore } from '@/store/user'
 import dayjs from 'dayjs'
@@ -383,7 +382,36 @@ const submitForm = async () => {
   await request[isEdit.value ? 'put' : 'post'](api, formData)
   message.success('操作成功'); formVisible.value = false; fetchInitialData()
 }
-const handleDelete = async (id: number) => { await request.delete('/instructor/delete/' + id); fetchInitialData() }
+const handleDelete = async (id: number) => { 
+  try {
+    await request.delete('/instructor/delete/' + id)
+    message.success('教练删除及清理操作已完成')
+    fetchInitialData()
+  } catch (err: any) {
+    message.error(err.response?.data?.message || '删除失败')
+  }
+}
+
+const confirmDelete = (record: any) => {
+  Modal.confirm({
+    title: `高危操作：确认删除教练【${record.realName}】吗？`,
+    icon: createVNode(ExclamationCircleOutlined),
+    content: createVNode('div', null, [
+      createVNode('p', { style: 'color: #ff4d4f; font-weight: bold; margin-top: 10px;' }, '删除教练将引发以下连锁操作：'),
+      createVNode('ol', { style: 'padding-left: 20px; line-height: 1.8;' }, [
+        createVNode('li', null, '该教练的系统登录账号及角色权限将被永久注销。'),
+        createVNode('li', null, '该教练名下的所有学员将被解绑，并由系统尝试自动重新分配给其他教练。'),
+        createVNode('li', null, '请注意，此操作不可逆！')
+      ])
+    ]),
+    okText: '确认删除',
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: async () => {
+      await handleDelete(record.id)
+    }
+  })
+}
 const drawerVisible = ref(false)
 const handleViewStudents = async (record: any) => {
   currentCoach.value = record; drawerVisible.value = true
@@ -393,8 +421,19 @@ const handleViewStudents = async (record: any) => {
 
 const getLoadStatus = (load: number) => load >= 10 ? 'error' : load >= 5 ? 'warning' : 'success'
 
+const licenseTypes = ref<any[]>([])
+const fetchLicenseTypes = async () => {
+  try {
+    const res: any = await request.get('/dict/type/LICENSE_TYPE')
+    licenseTypes.value = res.data || []
+  } catch (err) {
+    console.error('获取准教车型字典失败:', err)
+  }
+}
+
 onMounted(() => {
   fetchInitialData()
+  fetchLicenseTypes()
 })
 </script>
 

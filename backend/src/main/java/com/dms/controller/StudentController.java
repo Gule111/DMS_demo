@@ -21,14 +21,11 @@ public class StudentController {
     }
 
     /**
-     * 获取待分配教练的学员列表 (状态为 1-审核中/通过未分配)
+     * 获取待分配教练的学员列表 (通过且未分配教练)
      */
     @GetMapping("/pending")
     public Result<List<Student>> getPendingStudents() {
-        QueryWrapper<Student> query = new QueryWrapper<>();
-        // 状态 1 且未绑定教练
-        query.eq("status", 1).isNull("instructor_id");
-        return Result.success(studentMapper.selectList(query));
+        return Result.success(studentMapper.getPendingStudents());
     }
 
     /**

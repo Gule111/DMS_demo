@@ -28,6 +28,9 @@
         <router-view />
       </a-layout-content>
     </a-layout>
+
+    <!-- AI 助手悬浮窗 -->
+    <AICopilot />
   </a-layout>
 </template>
 
@@ -37,6 +40,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { logout } from '@/api/auth'
 import { useUserStore } from '@/store/user'
+import AICopilot from '@/components/AICopilot.vue'
 
 const router = useRouter()
 const route = useRoute()

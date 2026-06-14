@@ -23,7 +23,9 @@
             </a-tag>
           </template>
           <template v-else-if="column.key === 'action'">
-            <a-button type="link" @click="openAuditModal(record)">审核</a-button>
+            <a-button type="link" @click="openAuditModal(record)">
+              {{ activeTab === 'all' ? '查看' : '审核' }}
+            </a-button>
           </template>
         </template>
       </a-table>
@@ -32,11 +34,14 @@
     <!-- 审核弹窗 -->
     <a-modal
       v-model:visible="modalVisible"
-      title="学员报名材料审核"
+      :title="activeTab === 'all' ? '查看报名材料' : '学员报名材料审核'"
       @ok="handleAuditSubmit"
       :confirmLoading="submitting"
       width="1000px"
     >
+      <template #footer v-if="activeTab === 'all'">
+        <a-button @click="modalVisible = false">关闭</a-button>
+      </template>
       <div v-if="currentRecord" class="audit-modal-content">
         <a-row :gutter="24">
           <!-- 左侧：图片展示 -->
@@ -69,12 +74,28 @@
                 <a-tag color="blue">{{ currentRecord.license_type }}</a-tag>
               </div>
               
-              <div class="ai-suggestion-box">
+              <!-- 未终审时展示 AI 建议 -->
+              <div class="ai-suggestion-box" v-if="currentRecord.auditStatus === 1 || currentRecord.auditStatus === 2 || currentRecord.auditStatus === 0">
                 <div class="box-title">🤖 AI 初审建议</div>
-                <p>{{ currentRecord.auditRemark }}</p>
+                <p>{{ currentRecord.auditRemark || '暂无建议' }}</p>
+              </div>
+              
+              <!-- 已经终审时展示最终结果 -->
+              <div class="ai-suggestion-box" style="background: #e6f7ff; border-color: #91d5ff;" v-else-if="currentRecord.auditStatus === 3 || currentRecord.auditStatus === 4">
+                <div class="box-title" style="color: #0050b3;">📋 最终审核结果</div>
+                <div style="margin-top: 8px; font-size: 14px;">
+                  <span style="color: #0050b3; margin-right: 8px;"><strong>状态:</strong></span>
+                  <a-tag :color="getStatusColor(currentRecord.auditStatus)">
+                    {{ getStatusText(currentRecord.auditStatus) }}
+                  </a-tag>
+                </div>
+                <div style="margin-top: 8px; font-size: 14px; color: #0050b3;">
+                  <strong>处理意见:</strong> <br/>
+                  <span style="white-space: pre-wrap; display: inline-block; margin-top: 4px;">{{ currentRecord.auditRemark || '无' }}</span>
+                </div>
               </div>
 
-              <a-form layout="vertical" style="margin-top: 24px;">
+              <a-form v-if="activeTab !== 'all'" layout="vertical" style="margin-top: 24px;">
                 <a-form-item label="最终审核结果" required>
                   <a-radio-group v-model:value="auditForm.status">
                     <a-radio :value="3">通过 (最终成功)</a-radio>
