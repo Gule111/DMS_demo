@@ -11,7 +11,10 @@
               <a-tag color="gold">金牌教练</a-tag>
               <a-tag color="blue">{{ coach.teachType }} 教练</a-tag>
             </div>
-            <a-rate v-model:value="coach.rating" disabled allow-half />
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <a-rate v-model:value="coach.rating" disabled allow-half />
+              <a-button type="link" @click="handleRateClick">评价教练</a-button>
+            </div>
             <div class="coach-stats">
               <div class="stat-item">
                 <span class="stat-value">{{ coach.experienceYears }}年</span>
@@ -129,6 +132,14 @@
         </a-card>
       </a-col>
     </a-row>
+
+    <!-- 评分弹窗 -->
+    <a-modal v-model:open="rateVisible" title="评价教练" @ok="submitRating" :confirmLoading="submitRateLoading">
+      <div style="text-align: center; padding: 24px;">
+        <h3 style="margin-bottom: 16px;">请为您在驾校期间的教练打分：</h3>
+        <a-rate v-model:value="rateValue" allow-half style="font-size: 32px;" />
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -144,6 +155,11 @@ const allCoaches = ref<any[]>([])
 const activeTab = ref('book')
 const appointments = ref([])
 const bookingLoading = ref(false)
+
+const hasPassedSubject4 = ref(false)
+const rateVisible = ref(false)
+const rateValue = ref(5)
+const submitRateLoading = ref(false)
 
 const bookingForm = reactive({
   date: null as Dayjs | null,
@@ -196,6 +212,45 @@ const fetchAppointments = async () => {
     appointments.value = res.data
   } catch (err) {
     console.error('获取预约记录失败:', err)
+  }
+}
+
+const fetchProgress = async () => {
+  try {
+    const res: any = await request.get('/progress/my')
+    if (res.data) {
+      const subject4 = res.data.find((p: any) => p.subject === 4)
+      if (subject4 && subject4.status === 2) {
+        hasPassedSubject4.value = true
+      }
+    }
+  } catch (err) {
+    console.error('获取进度失败:', err)
+  }
+}
+
+const handleRateClick = () => {
+  if (!hasPassedSubject4.value) {
+    message.warning('请科目四考试结束后予以评分')
+    return
+  }
+  rateValue.value = coach.value?.rating || 5
+  rateVisible.value = true
+}
+
+const submitRating = async () => {
+  submitRateLoading.value = true
+  try {
+    await request.post('/instructor/rate', null, { 
+      params: { instructorId: coach.value.id, rating: rateValue.value } 
+    })
+    message.success('评价成功！感谢您的反馈')
+    rateVisible.value = false
+    fetchCoachInfo()
+  } catch (err: any) {
+    message.error(err.response?.data?.message || '评价失败')
+  } finally {
+    submitRateLoading.value = false
   }
 }
 
@@ -252,6 +307,7 @@ const getStatusText = (status: number) => {
 onMounted(() => {
   fetchCoachInfo()
   fetchAppointments()
+  fetchProgress()
 })
 </script>
 

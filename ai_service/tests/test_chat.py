@@ -22,7 +22,7 @@ llm = ChatOpenAI(
     model=os.getenv("AI_MODEL_NAME", "moonshot-v1-8k"),
     openai_api_key=api_key,
     openai_api_base=os.getenv("AI_BASE_URL", "https://api.moonshot.cn/v1"),
-    temperature=0.7
+    temperature=1.0
 )
 
 # 准备测试消息

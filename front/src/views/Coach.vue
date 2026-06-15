@@ -152,8 +152,9 @@
       <a-form layout="vertical">
         <a-form-item label="训练科目" required>
           <a-radio-group v-model:value="recordForm.subject">
-            <a-radio-button :value="2">科目二</a-radio-button>
-            <a-radio-button :value="3">科目三</a-radio-button>
+            <a-radio-button :value="1">科目一</a-radio-button>
+            <a-radio-button :value="2" :disabled="!isSub1Passed">科目二</a-radio-button>
+            <a-radio-button :value="3" :disabled="!isSub1Passed">科目三</a-radio-button>
           </a-radio-group>
         </a-form-item>
         <a-form-item label="训练时长 (小时)" required>
@@ -161,13 +162,10 @@
         </a-form-item>
         <a-form-item label="今日训练内容">
           <a-checkbox-group v-model:value="recordForm.contentList">
-            <a-row>
-              <a-col :span="12"><a-checkbox value="基础操作">基础操作</a-checkbox></a-col>
-              <a-col :span="12"><a-checkbox value="倒车入库">倒车入库</a-checkbox></a-col>
-              <a-col :span="12"><a-checkbox value="侧方停车">侧方停车</a-checkbox></a-col>
-              <a-col :span="12"><a-checkbox value="坡道定点">坡道定点</a-checkbox></a-col>
-              <a-col :span="12"><a-checkbox value="曲线行驶">曲线行驶</a-checkbox></a-col>
-              <a-col :span="12"><a-checkbox value="道路考试模拟">模拟练习</a-checkbox></a-col>
+            <a-row :gutter="[16, 8]">
+              <a-col :span="12" v-for="opt in currentSubjectOptions" :key="opt">
+                <a-checkbox :value="opt">{{ opt }}</a-checkbox>
+              </a-col>
             </a-row>
           </a-checkbox-group>
         </a-form-item>
@@ -200,7 +198,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed, createVNode } from 'vue'
+import { ref, onMounted, reactive, computed, createVNode, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { ReloadOutlined, PhoneOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import request from '@/utils/request'
@@ -239,11 +237,68 @@ const recordForm = reactive({
   hours: 2.0,
   contentList: [] as string[]
 })
-const handleOpenRecord = (student: any) => {
-  currentStudent.value = student
-  recordForm.subject = 2
-  recordForm.hours = 2.0
+
+// 各个科目对应的训练内容选项
+const subjectOneOptions = [
+  '交通法规理论学习',
+  '安全文明驾驶常识',
+  '理论模拟考试练习',
+  '易错题专项突破'
+]
+
+const subjectTwoOptions = [
+  '倒车入库',
+  '侧方停车',
+  '坡道定点停车与起步',
+  '直角转弯',
+  '曲线行驶',
+  '场地模拟考试'
+]
+
+const subjectThreeOptions = [
+  '上车准备与起步',
+  '直线行驶与加减挡',
+  '变更车道与超车',
+  '通过路口与学校区域',
+  '掉头与会车',
+  '靠边停车',
+  '模拟夜间灯光使用',
+  '道路模拟考试'
+]
+
+// 动态获取当前选中的科目训练内容
+const currentSubjectOptions = computed(() => {
+  if (recordForm.subject === 1) return subjectOneOptions
+  if (recordForm.subject === 2) return subjectTwoOptions
+  if (recordForm.subject === 3) return subjectThreeOptions
+  return []
+})
+
+// 当切换科目时，自动清空已选的训练项目列表
+watch(() => recordForm.subject, () => {
   recordForm.contentList = []
+})
+const isSub1Passed = ref(false)
+
+const handleOpenRecord = async (student: any) => {
+  currentStudent.value = student
+  recordForm.contentList = []
+  recordForm.subject = 1
+  isSub1Passed.value = false
+  
+  try {
+    const res: any = await request.get('/progress/student/' + student.id)
+    const progressList = res.data || []
+    const sub1 = progressList.find((p: any) => p.subject === 1)
+    if (sub1 && sub1.status === 2) {
+      isSub1Passed.value = true
+      recordForm.subject = 2
+    }
+  } catch (err) {
+    console.error('获取学员科目一进度失败:', err)
+  }
+  
+  recordForm.hours = 2.0
   recordVisible.value = true
 }
 const submitRecord = async () => {
@@ -331,7 +386,6 @@ const submitExamResult = async () => {
 }
 
 // === 原有逻辑兼容 ===
-const instructorsList = ref([])
 const columns = [
   { title: '教练ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '教练姓名', dataIndex: 'realName', key: 'realName' },

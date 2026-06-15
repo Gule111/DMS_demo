@@ -132,4 +132,18 @@ public class InstructorController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 学员端：评价教练
+     */
+    @PostMapping("/rate")
+    public Result<String> rateInstructor(@RequestParam("instructorId") Long instructorId, @RequestParam("rating") java.math.BigDecimal rating) {
+        try {
+            Long userId = (Long) org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            instructorService.rateInstructor(userId, instructorId, rating);
+            return Result.success("评分成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

@@ -22,7 +22,13 @@ from app.services.tools import (
     get_pending_registrations,
     audit_registration,
     get_all_coaches,
-    assign_coach_to_student
+    assign_coach_to_student,
+    get_my_exams,
+    book_exam_session,
+    cancel_exam_booking,
+    get_admin_exam_list,
+    audit_exam_booking,
+    record_exam_score
 )
 
 # 定义工具字典，方便按名字查找
@@ -40,7 +46,13 @@ TOOLS_MAP = {
     "get_pending_registrations": get_pending_registrations,
     "audit_registration": audit_registration,
     "get_all_coaches": get_all_coaches,
-    "assign_coach_to_student": assign_coach_to_student
+    "assign_coach_to_student": assign_coach_to_student,
+    "get_my_exams": get_my_exams,
+    "book_exam_session": book_exam_session,
+    "cancel_exam_booking": cancel_exam_booking,
+    "get_admin_exam_list": get_admin_exam_list,
+    "audit_exam_booking": audit_exam_booking,
+    "record_exam_score": record_exam_score
 }
 
 # 1. 定义 Graph State
@@ -102,9 +114,9 @@ def call_model(state: AgentState):
         f"当前系统时间是：{current_time_str}。\n"
         f"当前登录用户的角色是：{role_name}（1代表管理员，2代表教练员，3代表学员）。\n"
         "【重要角色与权限指令】：\n"
-        "1. 学员专属功能：get_my_progress、get_my_instructor、get_my_appointments、book_training_session、cancel_appointment。如果当前用户不是学员，必须拒绝他们访问这些功能。\n"
+        "1. 学员专属功能：get_my_progress、get_my_instructor、get_my_appointments、book_training_session、cancel_appointment、get_my_exams、book_exam_session、cancel_exam_booking。如果当前用户不是学员，必须拒绝他们访问这些功能。\n"
         "2. 教练专属功能：get_instructor_students、record_training_hours、get_instructor_appointments、handle_student_appointment、record_exam_result。如果当前用户不是教练，必须拒绝访问。\n"
-        "3. 管理员专属功能：get_pending_registrations、audit_registration、get_all_coaches、assign_coach_to_student。如果当前用户不是管理员，必须拒绝访问。\n"
+        "3. 管理员专属功能：get_pending_registrations、audit_registration、get_all_coaches、assign_coach_to_student、get_admin_exam_list、audit_exam_booking、record_exam_score。如果当前用户不是管理员，必须拒绝访问。\n"
         "【基本指令】：\n"
         "1. 如果用户的问题可以通过参考下方【参考知识库】解答，请优先基于知识库内容给出回答。\n"
         "2. 在调用工具时，系统会自动为你注入 token，你无需询问用户 token 也不必尝试伪造。只需将你识别出的所需参数填入即可。\n"
@@ -118,7 +130,7 @@ def call_model(state: AgentState):
         model=settings.AI_MODEL_NAME,
         openai_api_key=settings.AI_API_KEY,
         openai_api_base=settings.AI_BASE_URL,
-        temperature=0.7
+        temperature=1.0
     )
     llm_with_tools = llm.bind_tools(list(TOOLS_MAP.values()))
     
@@ -150,9 +162,9 @@ def execute_tools(state: AgentState):
             
             # 【安全检查】：防范越权调用，严格的角色隔离
             role = state.get("role", 3)
-            student_only_tools = ["get_my_progress", "get_my_instructor", "get_my_appointments", "book_training_session", "cancel_appointment"]
+            student_only_tools = ["get_my_progress", "get_my_instructor", "get_my_appointments", "book_training_session", "cancel_appointment", "get_my_exams", "book_exam_session", "cancel_exam_booking"]
             instructor_only_tools = ["get_instructor_students", "record_training_hours", "get_instructor_appointments", "handle_student_appointment", "record_exam_result"]
-            admin_only_tools = ["get_pending_registrations", "audit_registration", "get_all_coaches", "assign_coach_to_student"]
+            admin_only_tools = ["get_pending_registrations", "audit_registration", "get_all_coaches", "assign_coach_to_student", "get_admin_exam_list", "audit_exam_booking", "record_exam_score"]
             
             if tool_name in student_only_tools and role != 3:
                 output = "错误: 您当前的角色不是学员，无权访问或操作学员专属功能。"

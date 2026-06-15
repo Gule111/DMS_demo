@@ -100,7 +100,7 @@ const routes = [
         path: 'exam',
         name: 'Exam',
         component: () => import('@/views/Exam.vue'),
-        meta: { title: '考试管理', roles: [1, 3] }
+        meta: { title: '预约考场', roles: [1, 3] }
       },
       {
         path: 'baseinfo',

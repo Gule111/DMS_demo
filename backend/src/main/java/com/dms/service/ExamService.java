@@ -40,8 +40,8 @@ public class ExamService {
         Student student = studentMapper.selectOne(new QueryWrapper<Student>().eq("user_id", userId));
         if (student == null) throw new RuntimeException("学员信息不存在");
 
-        // 校验学时是否达标 (科目一和科目四通常没有强制练车学时，但科目二三有)
-        if (subject == 2 || subject == 3) {
+        // 校验学时是否达标 (科目一、科目二和科目三均有学时要求)
+        if (subject == 1 || subject == 2 || subject == 3) {
             LearningProgress progress = progressMapper.selectOne(
                 new QueryWrapper<LearningProgress>().eq("student_id", student.getId()).eq("subject", subject)
             );
@@ -75,6 +75,28 @@ public class ExamService {
         Student student = studentMapper.selectOne(new QueryWrapper<Student>().eq("user_id", userId));
         if (student == null) return List.of();
         return examMapper.selectByStudentId(student.getId());
+    }
+
+    /**
+     * 学员取消考试预约
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelExam(Long userId, Long examId) {
+        Student student = studentMapper.selectOne(new QueryWrapper<Student>().eq("user_id", userId));
+        if (student == null) throw new RuntimeException("学员信息不存在");
+
+        Exam exam = examMapper.selectById(examId);
+        if (exam == null) {
+            throw new RuntimeException("记录不存在");
+        }
+        if (!exam.getStudentId().equals(student.getId())) {
+            throw new RuntimeException("无权操作他人的预约");
+        }
+        if (exam.getStatus() != 0) {
+            throw new RuntimeException("只有待审核的预约才能取消");
+        }
+
+        examMapper.deleteById(examId);
     }
 
     /**

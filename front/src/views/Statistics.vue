@@ -6,7 +6,7 @@
     <a-row :gutter="16">
       <a-col :span="6" v-for="(val, key) in overviewMap" :key="key">
         <a-card class="stat-card">
-          <a-statistic :title="val.title" :value="stats.overview[key]" :value-style="{ color: val.color }" />
+          <a-statistic :title="val.title" :value="(stats.overview as any)[key]" :value-style="{ color: val.color }" />
         </a-card>
       </a-col>
     </a-row>

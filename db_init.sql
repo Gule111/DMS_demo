@@ -7,7 +7,7 @@ create table dms_demo.biz_enrollments
     id_card_back  varchar(255)      not null comment '身份证反面URL',
     health_cert   varchar(255)      null comment '体检证明URL',
     audit_status  tinyint default 0 null comment '审核状态: 0-待审核, 1-通过, 2-驳回',
-    audit_remark  varchar(255)      null comment '审核意见',
+    audit_remark  text              null comment '审核意见',
     auditor_id    bigint            null comment '审核人ID'
 )
     comment '报名材料及审核表' charset = utf8mb4;

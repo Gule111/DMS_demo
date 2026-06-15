@@ -4,6 +4,10 @@ export function bookExam(data: any) {
   return request.post('/exam/book', data)
 }
 
+export function cancelExam(id: number) {
+  return request.post(`/exam/cancel/${id}`)
+}
+
 export function getMyExams() {
   return request.get('/exam/my')
 }
@@ -12,7 +16,7 @@ export function getAdminExamList(status?: number) {
   return request.get('/exam/admin/list', { params: { status } })
 }
 
-export function auditExam(data: { id: number; status: number }) {
+export function auditExam(data: any) {
   return request.post('/exam/admin/audit', data)
 }
 

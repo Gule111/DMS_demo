@@ -70,7 +70,6 @@ import {
   FormOutlined, 
   TeamOutlined, 
   ScheduleOutlined, 
-  IdcardOutlined, 
   LineChartOutlined, 
   SafetyCertificateOutlined,
   BarChartOutlined,
@@ -92,7 +91,7 @@ const shortcuts = computed(() => {
     { path: '/app/assign', title: '分配管理', desc: '审核报名并分配教练', icon: SolutionOutlined, roles: [1] },
     { path: '/app/statistics', title: '统计分析', desc: '全局经营与考试数据统计', icon: BarChartOutlined, roles: [1] },
     { path: '/app/progress', title: '学习进度', desc: '查看各科目学习情况', icon: LineChartOutlined, roles: [3] },
-    { path: '/app/exam', title: '考试管理', desc: '预约考试、查询成绩', icon: SafetyCertificateOutlined, roles: [1, 3] },
+    { path: '/app/exam', title: '预约考场', desc: '预约考试、查询成绩', icon: SafetyCertificateOutlined, roles: [1, 3] },
     { path: '/app/baseinfo', title: '基础信息', desc: '管理考场与配置', icon: ScheduleOutlined, roles: [1] },
   ]
   return allShortcuts.filter(item => item.roles.includes(currentRole))

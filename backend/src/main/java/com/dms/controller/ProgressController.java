@@ -37,6 +37,18 @@ public class ProgressController {
     }
 
     /**
+     * 教练员/管理员端：获取指定学员的学习进度
+     */
+    @GetMapping("/student/{studentId}")
+    public Result<List<com.dms.dto.LearningProgressDTO>> getStudentProgress(@PathVariable Long studentId) {
+        try {
+            return Result.success(progressService.getStudentProgressByStudentId(studentId));
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
      * 学员端：获取自己的练车记录
      */
     @GetMapping("/records")

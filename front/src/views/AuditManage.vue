@@ -24,7 +24,7 @@
           </template>
           <template v-else-if="column.key === 'action'">
             <a-button type="link" @click="openAuditModal(record)">
-              {{ activeTab === 'all' ? '查看' : '审核' }}
+              {{ record.auditStatus < 3 ? '审核' : '查看' }}
             </a-button>
           </template>
         </template>
@@ -34,12 +34,12 @@
     <!-- 审核弹窗 -->
     <a-modal
       v-model:visible="modalVisible"
-      :title="activeTab === 'all' ? '查看报名材料' : '学员报名材料审核'"
+      :title="currentRecord && currentRecord.auditStatus < 3 ? '学员报名材料审核' : '查看报名材料'"
       @ok="handleAuditSubmit"
       :confirmLoading="submitting"
       width="1000px"
     >
-      <template #footer v-if="activeTab === 'all'">
+      <template #footer v-if="currentRecord && currentRecord.auditStatus >= 3">
         <a-button @click="modalVisible = false">关闭</a-button>
       </template>
       <div v-if="currentRecord" class="audit-modal-content">
@@ -95,7 +95,7 @@
                 </div>
               </div>
 
-              <a-form v-if="activeTab !== 'all'" layout="vertical" style="margin-top: 24px;">
+              <a-form v-if="currentRecord && currentRecord.auditStatus < 3" layout="vertical" style="margin-top: 24px;">
                 <a-form-item label="最终审核结果" required>
                   <a-radio-group v-model:value="auditForm.status">
                     <a-radio :value="3">通过 (最终成功)</a-radio>
@@ -185,8 +185,9 @@ const getStatusText = (status: number) => {
 
 const openAuditModal = (record: any) => {
   currentRecord.value = record
-  auditForm.value.status = record.auditStatus === 1 ? 3 : 4
-  auditForm.value.remark = record.auditRemark
+  // 默认终审状态：如果AI初审被驳回(2)，默认选驳回(4)；其他情况（如待AI审核0或初审通过1）默认选通过(3)
+  auditForm.value.status = record.auditStatus === 2 ? 4 : 3
+  auditForm.value.remark = record.auditRemark || ''
   modalVisible.value = true
 }
 

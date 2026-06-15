@@ -69,18 +69,18 @@ public class InstructorService {
     public void addInstructor(Instructor instructor) {
         // 1. 创建对应的 sys_users 账号
         User user = new User();
-        user.setUsername(instructor.getPhone()); // 默认手机号作为登录名
+        user.setUsername(instructor.getRealName()); // 使用教练姓名作为用户名
         user.setPhone(instructor.getPhone());
         user.setPassword(cn.hutool.crypto.digest.DigestUtil.md5Hex("Aq123456"));
         user.setStatus(1);
         user.setCreatedAt(java.time.LocalDateTime.now());
         
-        // 检查用户是否已存在 (根据手机号)
+        // 检查用户是否已存在 (根据手机号或用户名)
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User> query = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-        query.eq(User::getPhone, instructor.getPhone()).or().eq(User::getUsername, instructor.getPhone());
+        query.eq(User::getPhone, instructor.getPhone()).or().eq(User::getUsername, instructor.getRealName());
         User existUser = userMapper.selectOne(query);
         if (existUser != null) {
-            throw new RuntimeException("该手机号已被注册，无法新增为新教练");
+            throw new RuntimeException("该手机号或姓名已被注册，无法新增为新教练");
         }
         
         userMapper.insert(user);
@@ -228,5 +228,30 @@ public class InstructorService {
 
         // 新教练的负荷 +1
         instructorMapper.incrementLoad(newInstructorId);
+    }
+
+    /**
+     * 学员评分教练
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void rateInstructor(Long userId, Long instructorId, java.math.BigDecimal newRating) {
+        Student student = studentMapper.selectOne(new QueryWrapper<Student>().eq("user_id", userId));
+        if (student == null) throw new RuntimeException("非学员用户无法评分");
+        
+        // 校验学员状态是否已拿证(科目四通过)
+        if (student.getStatus() != 3) {
+            throw new RuntimeException("请科目四考试结束后予以评分");
+        }
+
+        Instructor instructor = instructorMapper.selectById(instructorId);
+        if (instructor != null) {
+            if (instructor.getRating() == null) {
+                instructor.setRating(newRating);
+            } else {
+                java.math.BigDecimal current = instructor.getRating();
+                instructor.setRating(current.add(newRating).divide(new java.math.BigDecimal("2"), 1, java.math.RoundingMode.HALF_UP));
+            }
+            instructorMapper.updateById(instructor);
+        }
     }
 }

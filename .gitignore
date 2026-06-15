@@ -1,0 +1,62 @@
+# =============================================
+# DMS 项目 .gitignore
+# =============================================
+
+# ---------- 环境变量 & 敏感配置 ----------
+.env
+*.env.local
+
+# ---------- IDE & Agent 工具 ----------
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.agent/             # 忽略 Antigravity 的 Agent 技能和本地运行配置
+
+# ---------- Java / Maven ----------
+target/
+!.mvn/wrapper/maven-wrapper.jar
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# ---------- Node / 前端 ----------
+node_modules/
+dist/
+dist-ssr/
+*.local
+.cache/
+
+# ---------- 日志 ----------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---------- 操作系统 ----------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ---------- 本地文档 & 备份 ----------
+/*.md
+*.bak
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+ai_service/data/chroma_db/
+.venv/
+venv/

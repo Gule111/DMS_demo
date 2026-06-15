@@ -161,9 +161,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import request from '@/utils/request'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
 const currentStep = ref(0)
 const submitting = ref(false)
 const statusLoading = ref(false)
@@ -294,10 +291,6 @@ const handleSubmit = async () => {
   } finally {
     submitting.value = false
   }
-}
-
-const refreshStatus = () => {
-  message.info('刷新状态功能将在对接 AI 审核后完善')
 }
 </script>
 

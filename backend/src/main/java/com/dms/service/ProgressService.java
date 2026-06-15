@@ -102,6 +102,45 @@ public class ProgressService {
     }
 
     /**
+     * 根据学员ID直接获取其完整学习进度
+     */
+    public List<com.dms.dto.LearningProgressDTO> getStudentProgressByStudentId(Long studentId) {
+        List<LearningProgress> dbList = progressMapper.selectByStudentId(studentId);
+        List<Exam> examList = examMapper.selectByStudentId(studentId);
+        
+        java.util.List<com.dms.dto.LearningProgressDTO> fullList = new java.util.ArrayList<>();
+        for (int i = 1; i <= 4; i++) {
+            final int subject = i;
+            
+            LearningProgress dbProgress = dbList.stream()
+                .filter(p -> p.getSubject() == subject)
+                .findFirst()
+                .orElse(null);
+                
+            com.dms.dto.LearningProgressDTO dto = new com.dms.dto.LearningProgressDTO();
+            dto.setStudentId(studentId);
+            dto.setSubject(subject);
+            
+            if (dbProgress != null) {
+                dto.setId(dbProgress.getId());
+                dto.setHoursDone(dbProgress.getHoursDone());
+                dto.setStatus(dbProgress.getStatus());
+            } else {
+                dto.setHoursDone(0);
+                dto.setStatus(0);
+            }
+            
+            examList.stream()
+                .filter(e -> e.getSubject() == subject && e.getScore() != null)
+                .findFirst()
+                .ifPresent(e -> dto.setLatestScore(e.getScore()));
+                
+            fullList.add(dto);
+        }
+        return fullList;
+    }
+
+    /**
      * 获取学员完整进度 (确保返回 1-4 科目完整列表，并附带成绩)
      */
     public List<com.dms.dto.LearningProgressDTO> getStudentProgress(Long userId) {
@@ -149,6 +188,16 @@ public class ProgressService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void recordTraining(Long instructorId, Long studentId, Integer subject, BigDecimal hours, String content) {
+        // 校验前置科目：录入科目二和科目三学时前，学员必须已通过科目一考试 (状态为 2)
+        if (subject == 2 || subject == 3) {
+            LearningProgress sub1Progress = progressMapper.selectOne(
+                new QueryWrapper<LearningProgress>().eq("student_id", studentId).eq("subject", 1)
+            );
+            if (sub1Progress == null || sub1Progress.getStatus() != 2) {
+                throw new RuntimeException("该学员尚未通过科目一考试，无法录入后续科目学时");
+            }
+        }
+        
         // 1. 保存详细练车记录
         TrainingRecord record = new TrainingRecord();
         record.setStudentId(studentId);
@@ -186,7 +235,7 @@ public class ProgressService {
         if (progress == null) return;
 
         int requiredHours = switch (subject) {
-            case 1 -> 0;  // 理论课，无需强制实操学时
+            case 1 -> 12; // 科目一理论课也计入学时要求 (12小时)
             case 2 -> 16;
             case 3 -> 24;
             case 4 -> 0;  // 理论课，无需强制实操学时

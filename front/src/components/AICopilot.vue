@@ -17,9 +17,14 @@
             <h3>你好，{{ userStore.username }}！</h3>
             <p>我是 DMS 智能驾驶助手，有什么可以帮你的？</p>
             <div class="quick-prompts">
-              <span class="prompt-tag" @click="sendQuickMessage('考C1驾照有哪些身体要求？')">考驾照身体要求？</span>
-              <span class="prompt-tag" @click="sendQuickMessage('查一下我的专属教练是谁')">查一下我的教练</span>
-              <span class="prompt-tag" @click="sendQuickMessage('查询我的学习进度')">查询我的学时进度</span>
+              <span 
+                v-for="(prompt, index) in quickPrompts" 
+                :key="index" 
+                class="prompt-tag" 
+                @click="sendQuickMessage(prompt.message)"
+              >
+                {{ prompt.text }}
+              </span>
             </div>
           </div>
           
@@ -61,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue'
+import { ref, nextTick, watch, computed } from 'vue'
 import { useUserStore } from '@/store/user'
 import axios from 'axios'
 import { message } from 'ant-design-vue'
@@ -71,6 +76,31 @@ const isOpen = ref(false)
 const inputText = ref('')
 const isLoading = ref(false)
 const messagesContainer = ref<HTMLElement | null>(null)
+
+// 根据不同角色，定制个性化的推荐提问列表
+const quickPrompts = computed(() => {
+  const role = Number(userStore.role)
+  if (role === 1) {
+    return [
+      { text: '怎么审核学员材料？', message: '怎么审核学员材料？' },
+      { text: '如何分配教练？', message: '如何给学员分配教练？' },
+      { text: '查看教练及负载', message: '系统目前有哪些教练以及他们的带教负荷？' }
+    ]
+  } else if (role === 2) {
+    return [
+      { text: '怎么录入学时？', message: '怎么录入学时？' },
+      { text: '如何录入考试成绩？', message: '如何录入学员考试成绩？' },
+      { text: '怎么管理日程时段？', message: '怎么设置和更改我的上课日程？' }
+    ]
+  } else {
+    // 默认学员 (role === 3)
+    return [
+      { text: '考驾照身体要求？', message: '考C1驾照有哪些身体要求？' },
+      { text: '查一下我的教练', message: '查一下我的专属教练是谁' },
+      { text: '查询我的学时进度', message: '查询我的学习进度' }
+    ]
+  }
+})
 
 interface ChatMessage {
   role: 'user' | 'assistant'

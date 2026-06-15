@@ -50,6 +50,20 @@ public class ExamController {
     }
 
     /**
+     * 学员端：取消预约
+     */
+    @PostMapping("/cancel/{id}")
+    public Result<String> cancelExam(@PathVariable Long id) {
+        try {
+            Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            examService.cancelExam(userId, id);
+            return Result.success("取消预约成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
      * 管理员：获取申请列表
      */
     @GetMapping("/admin/list")

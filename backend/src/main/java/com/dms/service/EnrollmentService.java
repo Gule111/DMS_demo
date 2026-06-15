@@ -106,36 +106,24 @@ public class EnrollmentService {
         Enrollment enrollment = enrollmentMapper.selectById(enrollmentId);
         if (enrollment == null) throw new RuntimeException("报名记录不存在");
 
+        // 终审过后（状态为3-终审成功，或4-终审驳回）不能再次终审
+        if (enrollment.getAuditStatus() != null && (enrollment.getAuditStatus() == 3 || enrollment.getAuditStatus() == 4)) {
+            throw new RuntimeException("该报名记录已完成终审，无法重复审核");
+        }
+
         enrollment.setAuditStatus(status);
         enrollment.setAuditRemark(remark);
         enrollment.setAuditorId(auditorId);
         enrollmentMapper.updateById(enrollment);
 
-        // 如果终审通过(Status 3)，则需要更新学员表的状态并生成电子档案
+        // 如果终审通过(Status 3)，则需要初始化学习进度并生成电子档案，等待管理员在分配管理中为学员进行分配教练
         if (status == 3) {
             System.out.println("报名终审通过，正在执行后续逻辑，学员ID: " + enrollment.getStudentId());
             
-            // 1. 自动分配教练
-            // 先获取报名信息（主要是车型）
-            Enrollment fullEnrollment = enrollmentMapper.selectById(enrollmentId);
-            String licenseType = studentMapper.selectById(fullEnrollment.getStudentId()).getLicenseType();
-            Long bestInstructorId = instructorMapper.findBestInstructor(licenseType);
+            // 1. 初始化学习进度 (科目一到科目四)
+            progressService.initProgress(enrollment.getStudentId());
             
-            if (bestInstructorId != null) {
-                // 绑定教练
-                studentMapper.bindInstructor(fullEnrollment.getStudentId(), bestInstructorId);
-                // 教练负荷 +1
-                instructorMapper.incrementLoad(bestInstructorId);
-                System.out.println("已为学员分配最佳教练ID: " + bestInstructorId);
-            }
-            
-            // 2. 更新学员状态为“学习中” (status = 2)
-            studentMapper.updateStatus(fullEnrollment.getStudentId(), 2);
-
-            // 3. 初始化学习进度 (科目一到科目四)
-            progressService.initProgress(fullEnrollment.getStudentId());
-
-            // 4. 触发异步 PDF 生成任务
+            // 2. 触发异步 PDF 生成任务
             pdfService.generateAllPdfsAsync(enrollment.getStudentId());
         }
     }

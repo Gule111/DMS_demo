@@ -140,5 +140,85 @@ class TestAgent(unittest.TestCase):
         self.assertTrue(tool_message_found)
         self.assertEqual(messages[-1].content, "对不起，您目前是教练员身份登录，无权访问或操作学员专属的个人进度。")
 
+    @patch('app.services.agent.ChatOpenAI')
+    def test_student_forbidden_from_admin_exam_tools(self, mock_chat_openai):
+        """
+        测试学员(role=3)尝试调用管理员的考试管理工具时，被 execute_tools 拦截
+        """
+        mock_llm_instance = MagicMock()
+        mock_llm_instance.bind_tools.return_value = mock_llm_instance
+        
+        # 模拟大模型试图越权调用管理员考试工具
+        tool_call_msg = AIMessage(
+            content="",
+            tool_calls=[{
+                "name": "get_admin_exam_list",
+                "args": {"token": ""},
+                "id": "call_888"
+            }]
+        )
+        
+        final_msg = AIMessage(content="对不起，您目前是学员身份登录，无权访问或操作管理员的考试管理工具。")
+        mock_llm_instance.invoke.side_effect = [tool_call_msg, final_msg]
+        mock_chat_openai.return_value = mock_llm_instance
+
+        # 执行 Agent，设置 role = 3 (学员)
+        result = dms_agent.invoke({
+            "messages": [HumanMessage(content="查询全校的考试预约列表")],
+            "token": "student_token_xyz",
+            "role": 3
+        })
+
+        messages = result["messages"]
+        tool_message_found = False
+        for msg in messages:
+            if msg.__class__.__name__ == 'ToolMessage':
+                self.assertIn("无权访问", msg.content)
+                tool_message_found = True
+                break
+        
+        self.assertTrue(tool_message_found)
+        self.assertEqual(messages[-1].content, "对不起，您目前是学员身份登录，无权访问或操作管理员的考试管理工具。")
+
+    @patch('app.services.agent.ChatOpenAI')
+    def test_admin_forbidden_from_student_exam_tools(self, mock_chat_openai):
+        """
+        测试管理员(role=1)尝试调用学员的考试预约工具时，被 execute_tools 拦截
+        """
+        mock_llm_instance = MagicMock()
+        mock_llm_instance.bind_tools.return_value = mock_llm_instance
+        
+        # 模拟大模型试图越权调用学员考试预约工具
+        tool_call_msg = AIMessage(
+            content="",
+            tool_calls=[{
+                "name": "book_exam_session",
+                "args": {"token": "", "subject": 2, "exam_date": "2026-06-16", "exam_site": "城东第一考场"},
+                "id": "call_777"
+            }]
+        )
+        
+        final_msg = AIMessage(content="对不起，您目前是管理员身份登录，无权以学员身份进行约考操作。")
+        mock_llm_instance.invoke.side_effect = [tool_call_msg, final_msg]
+        mock_chat_openai.return_value = mock_llm_instance
+
+        # 执行 Agent，设置 role = 1 (管理员)
+        result = dms_agent.invoke({
+            "messages": [HumanMessage(content="帮我约个明天的科目二考试")],
+            "token": "admin_token_xyz",
+            "role": 1
+        })
+
+        messages = result["messages"]
+        tool_message_found = False
+        for msg in messages:
+            if msg.__class__.__name__ == 'ToolMessage':
+                self.assertIn("无权访问", msg.content)
+                tool_message_found = True
+                break
+        
+        self.assertTrue(tool_message_found)
+        self.assertEqual(messages[-1].content, "对不起，您目前是管理员身份登录，无权以学员身份进行约考操作。")
+
 if __name__ == '__main__':
     unittest.main()

@@ -17,13 +17,17 @@ def main():
         port=settings.REDIS_PORT, 
         password=settings.REDIS_PASSWORD, 
         decode_responses=True,
+        socket_timeout=35,           # 大于 BLPOP 超时时间即可
+        socket_connect_timeout=5,     # 连接超时
+        socket_keepalive=True,        # 开启 TCP 保活，防止闲置连接被防火墙/Redis服务端切断
+        retry_on_timeout=True,        # 超时自动重试
         protocol=2
     )
     
     while True:
         try:
-            # 阻塞式监听队列
-            item = r.blpop(QUEUE_NAME, timeout=0)
+            # 阻塞式监听队列，设置 30 秒超时，防止无限阻塞导致连接死掉
+            item = r.blpop(QUEUE_NAME, timeout=30)
             if item:
                 queue_name, data_str = item
                 print(f"\n[Queue] 收到新任务: {data_str}")

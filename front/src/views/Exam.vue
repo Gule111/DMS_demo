@@ -1,6 +1,6 @@
 <template>
   <div class="exam-manage-container">
-    <a-page-header title="考试管理" sub-title="预约考试、录入成绩及考场分配" />
+    <a-page-header title="预约考场" sub-title="预约考试、录入成绩及考场分配" />
 
     <a-card :bordered="false" class="main-card">
       <a-tabs v-model:activeKey="activeTab">
@@ -26,6 +26,12 @@
                   <span v-if="record.score !== null" :class="record.score >= 90 ? 'pass' : 'fail'">
                     {{ record.score }}
                   </span>
+                  <span v-else>-</span>
+                </template>
+                <template v-if="column.key === 'action'">
+                  <a-popconfirm v-if="record.status === 0" title="确定要取消预约吗？" @confirm="cancelBooking(record.id)">
+                    <a-button type="link" danger>取消预约</a-button>
+                  </a-popconfirm>
                   <span v-else>-</span>
                 </template>
               </template>
@@ -154,6 +160,7 @@ const studentColumns = [
   { title: '考试地点', dataIndex: 'examSite', key: 'examSite' },
   { title: '状态', key: 'status' },
   { title: '成绩', key: 'score' },
+  { title: '操作', key: 'action' }
 ]
 
 const adminColumns = [
@@ -204,6 +211,16 @@ const submitBooking = async () => {
     message.error(err.response?.data?.message || '操作失败')
   } finally {
     submitting.value = false
+  }
+}
+
+const cancelBooking = async (id: number) => {
+  try {
+    await examApi.cancelExam(id)
+    message.success('取消预约成功')
+    fetchMyExams()
+  } catch (err: any) {
+    message.error(err.response?.data?.message || '操作失败')
   }
 }
 

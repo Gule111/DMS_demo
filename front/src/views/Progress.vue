@@ -36,8 +36,8 @@
               </div>
               
               <div class="progress-body">
-                <!-- 实操科目显示进度条 -->
-                <div class="progress-bar-wrapper" v-if="item.subject === 2 || item.subject === 3">
+                <!-- 理论与实操科目显示进度条 -->
+                <div class="progress-bar-wrapper" v-if="item.subject === 1 || item.subject === 2 || item.subject === 3">
                   <div class="progress-info">
                     <span>已累计学时: <b>{{ item.hoursDone }}</b> / {{ requiredHours[item.subject] }}h</span>
                     <span class="percent">{{ Math.round((item.hoursDone / requiredHours[item.subject]) * 100) }}%</span>
