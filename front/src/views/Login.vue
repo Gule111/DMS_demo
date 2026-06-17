@@ -103,7 +103,13 @@ const cardStyle = computed(() => {
 
 async function handleSendCode() {
   if (!form.value.phone) {
-    message.warning('请先输入手机号')
+    message.warning('请输入手机号获取验证码')
+    return
+  }
+  // 如果输入的内容不是纯数字或者不符合手机号格式，提示用户名登录不需要发送验证码
+  const phoneRegex = /^1[3-9]\d{9}$/
+  if (!phoneRegex.test(form.value.phone)) {
+    message.warning('用户名登录无需获取验证码，可直接输入密码和测试验证码 123456 登录')
     return
   }
   

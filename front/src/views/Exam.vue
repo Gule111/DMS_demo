@@ -1,6 +1,6 @@
 <template>
   <div class="exam-manage-container">
-    <a-page-header title="预约考场" sub-title="预约考试、录入成绩及考场分配" />
+    <a-page-header :title="userStore.role === 1 ? '考试管理' : '预约考场'" :sub-title="userStore.role === 1 ? '管理考试预约及录入成绩' : '模拟考试，正式考试预约入口'" />
 
     <a-card :bordered="false" class="main-card">
       <a-tabs v-model:activeKey="activeTab">
@@ -13,6 +13,11 @@
             </div>
             <a-table :dataSource="myExams" :columns="studentColumns" rowKey="id" :loading="loading">
               <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'examType'">
+                  <a-tag :color="record.examType === 2 ? 'purple' : 'blue'">
+                    {{ record.examType === 2 ? '模拟考试' : '正式考试' }}
+                  </a-tag>
+                </template>
                 <template v-if="column.key === 'subject'">
                   科目 {{ subjectMap[record.subject] }}
                 </template>
@@ -44,6 +49,11 @@
           <a-tab-pane key="audit" tab="预约审批与考场分配">
             <a-table :dataSource="adminExams" :columns="adminColumns" rowKey="id" :loading="loading">
               <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'examType'">
+                  <a-tag :color="record.examType === 2 ? 'purple' : 'blue'">
+                    {{ record.examType === 2 ? '模拟考试' : '正式考试' }}
+                  </a-tag>
+                </template>
                 <template v-if="column.key === 'subject'">
                   科目 {{ subjectMap[record.subject] }}
                 </template>
@@ -74,6 +84,12 @@
     <!-- 学员：预约考试弹窗 -->
     <a-modal v-model:open="bookingVisible" title="发起考试预约" @ok="submitBooking" :confirmLoading="submitting">
       <a-form :model="bookingForm" layout="vertical">
+        <a-form-item label="考试类型" required>
+          <a-radio-group v-model:value="bookingForm.examType">
+            <a-radio :value="1">正式考试</a-radio>
+            <a-radio :value="2">模拟考试</a-radio>
+          </a-radio-group>
+        </a-form-item>
         <a-form-item label="预约科目" required>
           <a-select v-model:value="bookingForm.subject">
             <a-select-option :value="1">科目一 (理论)</a-select-option>
@@ -83,7 +99,7 @@
           </a-select>
         </a-form-item>
         <a-form-item label="期望日期" required>
-          <a-date-picker v-model:value="bookingForm.examDate" style="width: 100%" />
+          <a-date-picker v-model:value="bookingForm.examDate" style="width: 100%" :disabled-date="disabledDate" />
         </a-form-item>
         <a-form-item label="期望考场" required>
           <a-select v-model:value="bookingForm.examSite" placeholder="请选择考场">
@@ -106,7 +122,7 @@
           </a-select>
         </a-form-item>
         <a-form-item label="确认日期" required>
-          <a-date-picker v-model:value="assignForm.examDate" style="width: 100%" />
+          <a-date-picker v-model:value="assignForm.examDate" style="width: 100%" :disabled-date="disabledDate" />
         </a-form-item>
         <p style="color: #8c8c8c; font-size: 12px;">提示：您可以修改学员申请的考场和日期进行正式派位。</p>
       </a-form>
@@ -144,17 +160,23 @@ const bookingVisible = ref(false)
 const assignVisible = ref(false)
 const scoreVisible = ref(false)
 
-const bookingForm = reactive({ subject: 1, examDate: null as any, examSite: undefined })
+const bookingForm = reactive({ subject: 1, examType: 1, examDate: null as any, examSite: undefined })
 const assignForm = reactive({ id: null as any, examSite: '', examDate: null as any })
 
 const currentExamId = ref<number | null>(null)
 const currentScore = ref<number>(90)
+
+// 禁止选择今天之前的日期
+const disabledDate = (current: any) => {
+  return current && current < dayjs().endOf('day').subtract(1, 'day')
+}
 
 const subjectMap: any = { 1: '一', 2: '二', 3: '三', 4: '四' }
 const statusTextMap: any = { 0: '待审核', 1: '预约成功', 2: '考试完成', 3: '已拒绝' }
 const statusColorMap: any = { 0: 'orange', 1: 'blue', 2: 'green', 3: 'red' }
 
 const studentColumns = [
+  { title: '类型', key: 'examType' },
   { title: '科目', key: 'subject' },
   { title: '考试日期', key: 'examDate' },
   { title: '考试地点', dataIndex: 'examSite', key: 'examSite' },
@@ -164,7 +186,8 @@ const studentColumns = [
 ]
 
 const adminColumns = [
-  { title: '学员ID', dataIndex: 'studentId', key: 'studentId' },
+  { title: '学员姓名', dataIndex: 'studentName', key: 'studentName' },
+  { title: '类型', key: 'examType' },
   { title: '科目', key: 'subject' },
   { title: '申请日期', key: 'examDate' },
   { title: '申请地点', dataIndex: 'examSite', key: 'examSite' },

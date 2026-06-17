@@ -14,9 +14,9 @@
         <a-form layout="vertical">
           <a-form-item label="请选择您要报考的准驾车型" required>
             <a-radio-group v-model:value="formData.licenseType" button-style="solid" size="large">
-              <a-radio-button value="C1">🚗 小型汽车 (C1)</a-radio-button>
-              <a-radio-button value="C2">🚙 小型自动挡汽车 (C2)</a-radio-button>
-              <a-radio-button value="D">🏍️ 普通二轮摩托车 (D)</a-radio-button>
+              <a-radio-button v-for="item in licenseTypes" :key="item.id" :value="item.dictCode">
+                {{ getIconByLicenseType(item.dictCode) }} {{ item.dictValue }}
+              </a-radio-button>
             </a-radio-group>
           </a-form-item>
           <div style="margin-top: 24px;">
@@ -161,6 +161,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import request from '@/utils/request'
+import { getDictByType } from '@/api/common'
 const currentStep = ref(0)
 const submitting = ref(false)
 const statusLoading = ref(false)
@@ -178,6 +179,8 @@ const fileLists = ref({
   idCardBack: [] as any[],
   healthCert: [] as any[]
 })
+
+const licenseTypes = ref<any[]>([])
 
 // 查询最新状态
 const fetchStatus = async () => {
@@ -198,6 +201,28 @@ const fetchStatus = async () => {
   } finally {
     statusLoading.value = false
   }
+}
+
+// 获取配置的所有车型
+const fetchLicenseTypes = async () => {
+  try {
+    const res: any = await getDictByType('LICENSE_TYPE')
+    licenseTypes.value = res.data || []
+  } catch (err) {
+    console.error('获取车型数据失败:', err)
+  }
+}
+
+// 根据车型代码匹配合适的小图标
+const getIconByLicenseType = (code: string) => {
+  if (!code) return '🚗'
+  const upperCode = code.toUpperCase()
+  if (upperCode.startsWith('C1')) return '🚗'
+  if (upperCode.startsWith('C2')) return '🚙'
+  if (upperCode.startsWith('D')) return '🏍️'
+  if (upperCode.startsWith('E') || upperCode.startsWith('F')) return '🛵'
+  if (upperCode.startsWith('A') || upperCode.startsWith('B')) return '🚌'
+  return '🚗'
 }
 
 // 拉取电子档案列表
@@ -236,6 +261,7 @@ const handleResubmit = () => {
 
 onMounted(() => {
   fetchStatus()
+  fetchLicenseTypes()
 })
 
 // 阻止组件自带的上传请求，改为我们手动统一上传

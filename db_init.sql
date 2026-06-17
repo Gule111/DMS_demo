@@ -18,6 +18,7 @@ create table dms_demo.biz_exams
         primary key,
     student_id bigint            null comment '关联学员ID',
     subject    tinyint           not null comment '考试科目',
+    exam_type  tinyint default 1 null comment '考试类型: 1-正式考试, 2-模拟考试',
     exam_date  date              null comment '预约考试日期',
     exam_site  varchar(100)      null comment '考试地点',
     status     tinyint default 0 null comment '状态: 0-待审核, 1-预约成功, 2-考试完成',

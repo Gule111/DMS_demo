@@ -28,13 +28,14 @@ public class ExamController {
         try {
             Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             Integer subject = (Integer) params.get("subject");
+            Integer examType = params.get("examType") != null ? (Integer) params.get("examType") : 1;
             String site = (String) params.get("examSite");
             // 简单处理日期转换，实际建议用更严谨的转换
             Long timestamp = Long.valueOf(params.get("examDate").toString());
             Date date = new Date(timestamp);
             
-            examService.bookExam(userId, subject, date, site);
-            return Result.success("预约申请已提交，请等待管理员审核");
+            examService.bookExam(userId, subject, date, site, examType);
+            return Result.success(examType == 1 ? "正式考试预约成功" : "模拟考试预约申请已提交，请等待管理员审核");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

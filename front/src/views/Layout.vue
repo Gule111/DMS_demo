@@ -67,10 +67,19 @@ const visibleMenus = computed(() => {
       if (!roles) return true
       return roles.includes(userRole)
     })
-    .map(child => ({
-      path: child.path,
-      meta: child.meta
-    }))
+    .map(child => {
+      let title = child.meta?.title
+      if (child.path === 'exam') {
+        title = userRole === 1 ? '考试管理' : '预约考场'
+      }
+      return {
+        path: child.path,
+        meta: {
+          ...child.meta,
+          title
+        }
+      }
+    })
 })
 
 // 当前选中的菜单
@@ -81,6 +90,9 @@ const selectedKeys = computed(() => {
 
 // 当前页面标题
 const currentTitle = computed(() => {
+  if (route.path.endsWith('/exam')) {
+    return userStore.role === 1 ? '考试管理' : '预约考场'
+  }
   return (route.meta?.title as string) || 'DMS 驾校管理系统'
 })
 

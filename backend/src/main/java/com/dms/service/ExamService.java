@@ -36,15 +36,31 @@ public class ExamService {
      * 学员预约考试
      */
     @Transactional(rollbackFor = Exception.class)
-    public void bookExam(Long userId, Integer subject, Date examDate, String examSite) {
+    public void bookExam(Long userId, Integer subject, Date examDate, String examSite, Integer examType) {
+        if (examType == null) examType = 1;
         Student student = studentMapper.selectOne(new QueryWrapper<Student>().eq("user_id", userId));
         if (student == null) throw new RuntimeException("学员信息不存在");
 
+        // 校验是否已经通过该科目的正式考试
+        LearningProgress progress = progressMapper.selectOne(
+            new QueryWrapper<LearningProgress>().eq("student_id", student.getId()).eq("subject", subject)
+        );
+        if (progress != null && progress.getStatus() == 2) {
+            throw new RuntimeException("您已通过该科目的正式考试，无需再次预约");
+        }
+
+        // 校验是否跳级预约
+        if (subject > 1) {
+            LearningProgress prevProgress = progressMapper.selectOne(
+                new QueryWrapper<LearningProgress>().eq("student_id", student.getId()).eq("subject", subject - 1)
+            );
+            if (prevProgress == null || prevProgress.getStatus() != 2) {
+                throw new RuntimeException("请先通过科目" + (subject - 1) + "的正式考试，再预约科目" + subject);
+            }
+        }
+
         // 校验学时是否达标 (科目一、科目二和科目三均有学时要求)
         if (subject == 1 || subject == 2 || subject == 3) {
-            LearningProgress progress = progressMapper.selectOne(
-                new QueryWrapper<LearningProgress>().eq("student_id", student.getId()).eq("subject", subject)
-            );
             if (progress == null || progress.getStatus() == 0) {
                 throw new RuntimeException("学时未达标，无法预约考试");
             }
@@ -54,17 +70,23 @@ public class ExamService {
         Exam existing = examMapper.selectOne(new QueryWrapper<Exam>()
             .eq("student_id", student.getId())
             .eq("subject", subject)
+            .eq("exam_type", examType)
             .in("status", 0, 1)); // 0-待审核, 1-预约成功
         if (existing != null) {
-            throw new RuntimeException("您已有该科目的考试预约，请勿重复操作");
+            throw new RuntimeException("您已有该科目的" + (examType == 1 ? "正式" : "模拟") + "考试预约，请勿重复操作");
         }
 
         Exam exam = new Exam();
         exam.setStudentId(student.getId());
         exam.setSubject(subject);
+        exam.setExamType(examType);
         exam.setExamDate(examDate);
         exam.setExamSite(examSite);
-        exam.setStatus(0); // 待审核
+        if (examType == 1) {
+            exam.setStatus(1); // 正式考试直接预约成功
+        } else {
+            exam.setStatus(0); // 模拟考试待审核
+        }
         examMapper.insert(exam);
     }
 
@@ -103,12 +125,7 @@ public class ExamService {
      * 管理员：获取所有考试申请
      */
     public List<Exam> getAdminExamList(Integer status) {
-        QueryWrapper<Exam> wrapper = new QueryWrapper<>();
-        if (status != null) {
-            wrapper.eq("status", status);
-        }
-        wrapper.orderByDesc("exam_date");
-        return examMapper.selectList(wrapper);
+        return examMapper.selectAdminExamList(status);
     }
 
     /**
@@ -137,7 +154,9 @@ public class ExamService {
         exam.setStatus(2); // 2-考试完成
         examMapper.updateById(exam);
 
-        // 调用 ProgressService 的核心逻辑来更新进度，不再重复创建 Exam 记录
-        progressService.updateProgressByExam(exam.getStudentId(), exam.getSubject(), score);
+        if (exam.getExamType() == null || exam.getExamType() == 1) {
+            // 调用 ProgressService 的核心逻辑来更新进度，不再重复创建 Exam 记录
+            progressService.updateProgressByExam(exam.getStudentId(), exam.getSubject(), score);
+        }
     }
 }
