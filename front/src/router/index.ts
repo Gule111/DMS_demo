@@ -46,7 +46,7 @@ const routes = [
         path: 'feedback',
         name: 'Feedback',
         component: () => import('@/views/HourManage.vue'),
-        meta: { title: '成绩反馈', roles: [2] }
+        meta: { title: '成绩反馈', roles: [] }
       },
       {
         path: 'audit',
@@ -100,7 +100,7 @@ const routes = [
         path: 'exam',
         name: 'Exam',
         component: () => import('@/views/Exam.vue'),
-        meta: { title: '预约考场', roles: [1, 3] }
+        meta: { title: '考试管理', roles: [1, 3] }
       },
       {
         path: 'baseinfo',

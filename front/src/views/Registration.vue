@@ -15,7 +15,7 @@
           <a-form-item label="请选择您要报考的准驾车型" required>
             <a-radio-group v-model:value="formData.licenseType" button-style="solid" size="large">
               <a-radio-button v-for="item in licenseTypes" :key="item.id" :value="item.dictCode">
-                {{ getIconByLicenseType(item.dictCode) }} {{ item.dictValue }}
+                {{ item.dictValue }}
               </a-radio-button>
             </a-radio-group>
           </a-form-item>
@@ -213,17 +213,7 @@ const fetchLicenseTypes = async () => {
   }
 }
 
-// 根据车型代码匹配合适的小图标
-const getIconByLicenseType = (code: string) => {
-  if (!code) return '🚗'
-  const upperCode = code.toUpperCase()
-  if (upperCode.startsWith('C1')) return '🚗'
-  if (upperCode.startsWith('C2')) return '🚙'
-  if (upperCode.startsWith('D')) return '🏍️'
-  if (upperCode.startsWith('E') || upperCode.startsWith('F')) return '🛵'
-  if (upperCode.startsWith('A') || upperCode.startsWith('B')) return '🚌'
-  return '🚗'
-}
+
 
 // 拉取电子档案列表
 const fetchDocs = async () => {

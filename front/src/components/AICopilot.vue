@@ -6,7 +6,7 @@
         <div class="chat-header">
           <div class="header-title">
             <img src="@/assets/robot.png" alt="AI Robot" class="robot-icon" />
-            <span>DMS Copilot</span>
+            <span>AI智能助手</span>
           </div>
           <button class="close-btn" @click="toggleChat">×</button>
         </div>
@@ -59,7 +59,7 @@
 
     <!-- Floating Button -->
     <div class="floating-btn" @click="toggleChat" :class="{ 'is-open': isOpen }">
-      <img src="@/assets/robot.png" alt="Copilot" class="btn-icon" />
+      <img src="@/assets/robot.png" alt="AI智能助手" class="btn-icon" />
       <div class="pulse-ring"></div>
     </div>
   </div>

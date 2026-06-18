@@ -1,4 +1,4 @@
-<template>
+`<template>
   <div class="coach-container">
     <div class="header-section">
       <a-page-header 
@@ -111,39 +111,6 @@
           </a-card>
         </a-tab-pane>
 
-        <!-- 模块 4：成绩反馈 -->
-        <a-tab-pane key="exams" tab="成绩反馈">
-          <a-card class="module-card">
-            <a-form layout="vertical">
-              <a-form-item label="选择学员" required>
-                <a-select v-model:value="examForm.studentId" placeholder="请选择学员">
-                  <a-select-option v-for="s in coachStudents" :key="s.id" :value="s.id">{{ s.realName }}</a-select-option>
-                </a-select>
-              </a-form-item>
-              <a-row :gutter="16">
-                <a-col :span="12">
-                  <a-form-item label="考试科目" required>
-                    <a-select v-model:value="examForm.subject">
-                      <a-select-option :value="1">科目一</a-select-option>
-                      <a-select-option :value="2">科目二</a-select-option>
-                      <a-select-option :value="3">科目三</a-select-option>
-                      <a-select-option :value="4">科目四</a-select-option>
-                    </a-select>
-                  </a-form-item>
-                </a-col>
-                <a-col :span="12">
-                  <a-form-item label="考试分数" required>
-                    <a-input-number v-model:value="examForm.score" :min="0" :max="100" style="width: 100%" />
-                  </a-form-item>
-                </a-col>
-              </a-row>
-              <a-form-item label="简单评价/备注">
-                <a-textarea v-model:value="examForm.remark" placeholder="录入学员表现评价" :rows="3" />
-              </a-form-item>
-              <a-button type="primary" block size="large" @click="submitExamResult" :loading="examLoading">提交反馈</a-button>
-            </a-form>
-          </a-card>
-        </a-tab-pane>
       </a-tabs>
     </div>
 
@@ -357,33 +324,6 @@ const toggleSlotBusy = async (slot: string, busy: boolean) => {
   }
 }
 
-// === 成绩反馈模块 ===
-const examLoading = ref(false)
-const examForm = reactive({
-  studentId: undefined,
-  subject: 2,
-  score: 90,
-  remark: ''
-})
-const submitExamResult = async () => {
-  if (!examForm.studentId) {
-    message.warning('请选择学员')
-    return
-  }
-  examLoading.value = true
-  try {
-    await request.post('/progress/exam-result', null, {
-      params: examForm
-    })
-    message.success('成绩录入成功，进度已同步')
-    examForm.studentId = undefined
-    examForm.remark = ''
-  } catch (err) {
-    message.error('提交失败')
-  } finally {
-    examLoading.value = false
-  }
-}
 
 // === 原有逻辑兼容 ===
 const columns = [

@@ -11,9 +11,12 @@
       <h2>DMS 驾校报名系统</h2>
 
       <a-form :model="form" @finish="handleLogin" layout="vertical">
-        <a-form-item label="用户名/手机号" name="phone"
-          :rules="[{ required: true, message: '请输入用户名或手机号' }]">
-          <a-input v-model:value="form.phone" placeholder="请输入用户名或手机号" size="large" />
+        <a-form-item label="手机号" name="phone"
+          :rules="[
+            { required: true, message: '请输入手机号' },
+            { pattern: /^1[3-9]\d{9}$/, message: '请输入合法的11位手机号' }
+          ]">
+          <a-input v-model:value="form.phone" placeholder="请输入11位手机号" size="large" />
         </a-form-item>
 
         <a-form-item label="密码" name="password"
@@ -106,10 +109,9 @@ async function handleSendCode() {
     message.warning('请输入手机号获取验证码')
     return
   }
-  // 如果输入的内容不是纯数字或者不符合手机号格式，提示用户名登录不需要发送验证码
   const phoneRegex = /^1[3-9]\d{9}$/
   if (!phoneRegex.test(form.value.phone)) {
-    message.warning('用户名登录无需获取验证码，可直接输入密码和测试验证码 123456 登录')
+    message.warning('请输入合法的11位手机号')
     return
   }
   
@@ -135,7 +137,12 @@ async function handleSendCode() {
 
 async function handleLogin() {
   if (!form.value.phone) {
-    message.warning('请输入账号')
+    message.warning('请输入手机号')
+    return
+  }
+  const phoneRegex = /^1[3-9]\d{9}$/
+  if (!phoneRegex.test(form.value.phone)) {
+    message.warning('请输入合法的11位手机号')
     return
   }
   if (!form.value.password) {

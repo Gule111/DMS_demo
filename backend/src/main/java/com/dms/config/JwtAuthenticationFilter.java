@@ -39,23 +39,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        // 1. 从请求头中提取 Token
+        // 1. 从 HTTP 请求的 Authorization 头中提取 Bearer Token
         String token = extractToken(request);
 
         if (StringUtils.hasText(token)) {
             try {
-                // 2. 解析 Token 获取用户信息
+                // 2. 验证并解析 Token 签名，提取载荷中的明文用户信息
                 Long userId = jwtUtils.getUserId(token);
                 String username = jwtUtils.getUsername(token);
-                Integer role = jwtUtils.getRole(token);
+                Integer role = jwtUtils.getRole(token); // (1-管理员, 2-教练员, 3-学员)
 
-                // 3. 检查 Token 是否在 Redis 中仍然有效（未被注销）
+                // 3. 核心安全防护：比对 Redis 缓存中的活跃 Token，验证令牌是否依然有效
+                // 这在以下场景下发挥决定性作用：
+                //   - 修改角色后踢人：当管理员修改角色，Redis 中该用户的 Token 会被 logout() 删掉，此处就会返回 false 并阻断访问。
+                //   - 单点登录/顶号下线：若用户在别处登录，原 Token 被新 Token 覆盖，原 Token 在此处就会失效，返回 401。
                 if (!authService.isTokenValid(userId, token)) {
                     writeErrorResponse(response, 401, "Token已失效，请重新登录");
                     return;
                 }
 
-                // 4. 构建权限信息并设置到 SecurityContext 中
+                // 4. 根据解密出的 role id，映射到 Spring Security 标准的权限字符串
+                // 该角色权限会在后端 Controller 层的 @PreAuthorize 注解中被进一步强制检验，构成终极防线。
                 String roleStr = switch (role) {
                     case 1 -> "ROLE_ADMIN";
                     case 2 -> "ROLE_COACH";
@@ -63,6 +67,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     default -> "ROLE_USER";
                 };
 
+                // 5. 将安全校验通过的用户身份与权限角色封装注册到 Security 上下文中，供本次请求后续使用
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 userId, null,
@@ -71,14 +76,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (ExpiredJwtException e) {
+                // 捕获 JWT 超过设定的过期期限异常
                 writeErrorResponse(response, 401, "Token已过期，请重新登录");
                 return;
             } catch (Exception e) {
+                // 捕获签名不匹配、非法伪造篡改等引起的解析失败异常
                 writeErrorResponse(response, 401, "Token无效");
                 return;
             }
         }
 
+        // 放行请求，继续执行过滤器链
         filterChain.doFilter(request, response);
     }
 

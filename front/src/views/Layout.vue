@@ -3,7 +3,7 @@
     <!-- 侧边栏 -->
     <a-layout-sider v-model:collapsed="collapsed" collapsible theme="dark">
       <div style="height: 48px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: bold; margin: 8px 0;">
-        {{ collapsed ? 'D' : 'DMS 管理系统' }}
+        {{ collapsed ? 'D' : roleZoneName }}
       </div>
       <a-menu theme="dark" mode="inline" :selectedKeys="selectedKeys" @click="handleMenuClick">
         <a-menu-item v-for="route in visibleMenus" :key="route.path">
@@ -47,6 +47,14 @@ const route = useRoute()
 const userStore = useUserStore()
 const collapsed = ref(false)
 
+// 动态侧边栏顶部区域名称
+const roleZoneName = computed(() => {
+  const role = Number(userStore.role)
+  if (role === 1) return '管理员专区'
+  if (role === 2) return '教练员专区'
+  return '学员专区'
+})
+
 /**
  * 根据当前用户角色过滤可见的菜单项
  * 从 Layout 路由的 children 中读取，只显示 meta.roles 包含当前角色的路由
@@ -67,19 +75,10 @@ const visibleMenus = computed(() => {
       if (!roles) return true
       return roles.includes(userRole)
     })
-    .map(child => {
-      let title = child.meta?.title
-      if (child.path === 'exam') {
-        title = userRole === 1 ? '考试管理' : '预约考场'
-      }
-      return {
-        path: child.path,
-        meta: {
-          ...child.meta,
-          title
-        }
-      }
-    })
+    .map(child => ({
+      path: child.path,
+      meta: child.meta
+    }))
 })
 
 // 当前选中的菜单
@@ -90,9 +89,6 @@ const selectedKeys = computed(() => {
 
 // 当前页面标题
 const currentTitle = computed(() => {
-  if (route.path.endsWith('/exam')) {
-    return userStore.role === 1 ? '考试管理' : '预约考场'
-  }
   return (route.meta?.title as string) || 'DMS 驾校管理系统'
 })
 

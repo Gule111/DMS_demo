@@ -51,7 +51,8 @@ def call_langchain_audit(task_data: dict) -> tuple[int, str]:
                             f"1. 确认身份证正面照（图1）、身份证反面照（图2）和体检证明（图3）均已上传且内容清晰可见。\n"
                             f"2. 身份证信息需完整无遮挡。\n"
                             f"3. 体检合格证结论必须为“合格”或“符合报考条件”，且不能有不符合该车型的身体限制（如无红绿色盲）。\n"
-                            f"请仔细分析图片，给出是否通过的结论。注意：所给的审核理由（reason）必须极其简明扼要，直接指出不合规的具体问题，字数必须严格控制在 40 字以内，不要长篇大论或重复陈述上传标准。"
+                            f"请仔细分析图片，给出是否通过的结论。并且必须以指定的 JSON 格式返回审核结论，不要返回任何其他无关的纯文本或用 ```json 代码块包裹。格式如下：\n"
+                            f'{{"is_passed": true 或 false, "reason": "审核理由（直接指出不合规的具体问题，字数严格控制在 40 字以内）"}}'
                         )
                     }
                 ]
@@ -71,21 +72,46 @@ def call_langchain_audit(task_data: dict) -> tuple[int, str]:
             max_tokens=1000
         )
         
-        # 4. 绑定结构化 Pydantic 输出
-        structured_llm = llm.with_structured_output(AuditResult)
+        # 4. 绑定结构化 Pydantic 输出 (指定 json_mode 契约)
+        structured_llm = llm.with_structured_output(AuditResult, method="json_mode")
         
-        print("[AI] 发起多模态审核请求...")
-        result = structured_llm.invoke(messages)
-        
-        # 5. 组装返回结果
-        if result.is_passed:
-            return 1, f"AI建议通过: {result.reason}"
-        else:
-            return 2, f"AI建议驳回: {result.reason}"
-
+        try:
+            print("[AI] 发起多模态审核请求...")
+            result = structured_llm.invoke(messages)
+            
+            # 5. 组装返回结果
+            if result.is_passed:
+                return 1, f"AI建议通过: {result.reason}"
+            else:
+                return 2, f"AI建议驳回: {result.reason}"
+        except Exception as parse_error:
+            print(f"[AI Warning] 结构化解析失败: {parse_error}，尝试容错解析...")
+            try:
+                # 重新用普通大模型调用，直接提取纯文本进行二次匹配
+                raw_response = llm.invoke(messages).content
+                print(f"[AI Fallback] 原始输出: {raw_response}")
+                
+                is_passed = True
+                for fail_word in ["不通过", "驳回", "拒绝", "未通过", "不合格", "异常", "缺失"]:
+                    if fail_word in raw_response:
+                        is_passed = False
+                        break
+                
+                import re
+                reason_match = re.search(r'"reason"\s*:\s*"([^"]+)"', raw_response)
+                if reason_match:
+                    reason = reason_match.group(1)
+                else:
+                    reason = raw_response.strip().replace("\n", " ")
+                    if len(reason) > 40:
+                        reason = reason[:40] + "..."
+                
+                return (1 if is_passed else 2), f"AI建议(容错): {reason}"
+            except Exception as inner_error:
+                print(f"[AI Error] 容错解析也失败了: {inner_error}")
+                degrade_remark = "AI多模态审核异常，建议转入人工初审。原因: 无法智能识别证件图片内容"
+                return 2, degrade_remark
     except Exception as e:
         error_msg = str(e)
-        print(f"[AI Error] 多模态审核发生异常: {error_msg}")
-        degrade_remark = "AI多模态审核异常，建议转入人工初审。原因: 无法智能识别证件图片内容"
-        print(f"[AI Degrading] 采用降级策略: {degrade_remark}")
-        return 2, degrade_remark
+        print(f"[AI Error] 发生外部异常: {error_msg}")
+        return 2, f"AI多模态审核异常，建议转入人工初审。原因: {error_msg}"

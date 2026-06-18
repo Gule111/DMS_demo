@@ -1,6 +1,6 @@
 <template>
   <div class="exam-manage-container">
-    <a-page-header :title="userStore.role === 1 ? '考试管理' : '预约考场'" :sub-title="userStore.role === 1 ? '管理考试预约及录入成绩' : '模拟考试，正式考试预约入口'" />
+    <a-page-header title="考试管理" :sub-title="userStore.role === 1 ? '管理考试预约及录入成绩' : '模拟考试，正式考试预约入口'" />
 
     <a-card :bordered="false" class="main-card">
       <a-tabs v-model:activeKey="activeTab">

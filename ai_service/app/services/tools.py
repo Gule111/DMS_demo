@@ -175,12 +175,15 @@ def record_exam_result(token: str, student_id: int, subject: int, score: int, re
 # ==========================================
 
 @tool
-def get_pending_registrations(token: str) -> str:
+def get_pending_registrations(token: str, status: int = 1) -> str:
     """
     管理员专用：查询待审核的在线报名记录。
+    参数:
+    - token: 前端的 jwt token。
+    - status: 过滤状态。1 代表“AI初审通过”的数据（默认，待管理员终审）；2 代表“AI初审驳回/未通过”的数据。
     """
     client = BackendClient(token)
-    res = client.get("/enrollment/admin/list?status=1")
+    res = client.get(f"/enrollment/admin/list?status={status}")
     if res.get("code") == 200:
         return json.dumps(res.get("data", []), ensure_ascii=False)
     else:
@@ -241,28 +244,43 @@ def assign_coach_to_student(token: str, student_id: int, instructor_id: int) -> 
 # ==========================================
 
 @tool
+def get_exam_sites(token: str) -> str:
+    """
+    获取系统配置的可用考试场地列表（考场列表）。
+    需要传入前端的 jwt token 作为认证。
+    返回的 JSON 字符串包含每个考场的唯一ID、键值等信息。
+    """
+    client = BackendClient(token)
+    res = client.get("/dict/type/EXAM_SITE")
+    if res.get("code") == 200:
+        return json.dumps(res.get("data", []), ensure_ascii=False)
+    else:
+        return f"查询考场列表失败: {res.get('msg', res.get('message', '未知错误'))}"
+
+@tool
 def get_my_exams(token: str) -> str:
     """
-    学员专用：获取当前学员的考试预约记录和历史考试记录。
+    学员专用：获取当前学员的考试预约记录和历史考试记录（包含模拟和正式考试）。
     需要传入前端的 jwt token 作为认证。
-    返回的 JSON 包含预约科目、考试日期、考试地点、状态（0-待审核, 1-预约成功, 2-考试完成, 3-已拒绝）以及分数。
+    返回的 JSON 包含预约科目、考试类型（examType: 1-正式考试, 2-模拟考试）、考试日期、考试地点、状态（0-待审核, 1-预约成功, 2-考试完成, 3-已拒绝）以及分数。
     """
     client = BackendClient(token)
     res = client.get("/exam/my")
     if res.get("code") == 200:
         return json.dumps(res.get("data", []), ensure_ascii=False)
     else:
-        return f"查询考试记录失败: {res.get('msg', '未知错误')}"
+        return f"查询考试记录失败: {res.get('msg', res.get('message', '未知错误'))}"
 
 @tool
-def book_exam_session(token: str, subject: int, exam_date: str, exam_site: str) -> str:
+def book_exam_session(token: str, subject: int, exam_date: str, exam_site: str, exam_type: int = 1) -> str:
     """
-    学员专用：发起一个新的考场预约申请。
+    学员专用：发起一个新的考场预约申请（支持正式考试或模拟考试）。
     参数:
     - token: 前端的 jwt token。
     - subject: 预约科目。1 (代表科目一), 2 (代表科目二), 3 (代表科目三), 4 (代表科目四)。
     - exam_date: 期望考试日期，格式必须为 YYYY-MM-DD。
     - exam_site: 期望考场地点名称（例如“城东第一考场”、“北郊考场”）。
+    - exam_type: 考试类型。1 代表正式考试（直接成功，无需审核），2 代表模拟考试（需要管理员审核）。默认为 1。
     """
     import datetime
     try:
@@ -275,13 +293,14 @@ def book_exam_session(token: str, subject: int, exam_date: str, exam_site: str) 
     data = {
         "subject": subject,
         "examSite": exam_site,
-        "examDate": timestamp
+        "examDate": timestamp,
+        "examType": exam_type
     }
     res = client.post("/exam/book", data=data)
     if res.get("code") == 200:
-        return "预约申请已成功提交，请等待管理员审核和考场分配。"
+        return res.get("data", "预约申请处理成功。")
     else:
-        return f"预约失败: {res.get('msg', '未知错误')}"
+        return f"预约失败: {res.get('msg', res.get('message', '未知错误'))}"
 
 @tool
 def cancel_exam_booking(token: str, exam_id: int) -> str:
@@ -319,7 +338,7 @@ def get_admin_exam_list(token: str, status: int = None) -> str:
 @tool
 def audit_exam_booking(token: str, exam_id: int, status: int, exam_site: str = None, exam_date: str = None) -> str:
     """
-    管理员专用：审核考试预约申请并进行考场正式分配与排位。
+    管理员专用：审核考试预约申请并进行考场正式分配与排位（主要适用于模拟考试，正式考试无需审批）。
     参数:
     - token: 前端的 jwt token。
     - exam_id: 考试预约记录ID。
@@ -348,16 +367,16 @@ def audit_exam_booking(token: str, exam_id: int, status: int, exam_site: str = N
     if res.get("code") == 200:
         return f"考场分配与预约审核操作成功，审核结果更新为 {status}。"
     else:
-        return f"预约审核操作失败: {res.get('msg', '未知错误')}"
+        return f"预约审核操作失败: {res.get('msg', res.get('message', '未知错误'))}"
 
 @tool
 def record_exam_score(token: str, exam_id: int, score: int) -> str:
     """
-    管理员专用：录入学员考试的正式成绩（0-100分）。
+    管理员专用：录入学员考试的正式成绩或模拟考试成绩（0-100分）。
     参数:
     - token: 前端的 jwt token。
     - exam_id: 考试预约记录ID。
-    - score: 正式考试分数。
+    - score: 考试分数。
     """
     client = BackendClient(token)
     data = {
@@ -366,6 +385,6 @@ def record_exam_score(token: str, exam_id: int, score: int) -> str:
     }
     res = client.post("/exam/admin/score", data=data)
     if res.get("code") == 200:
-        return f"学员考试成绩 {score} 录入完毕，已同步至学习进度中。"
+        return f"学员考试成绩 {score} 录入完毕，已同步至进度管理中。"
     else:
-        return f"成绩录入失败: {res.get('msg', '未知错误')}"
+        return f"成绩录入失败: {res.get('msg', res.get('message', '未知错误'))}"

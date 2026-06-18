@@ -86,12 +86,12 @@ const shortcuts = computed(() => {
     { path: '/app/roster', title: '学员名册', desc: '查看名下所有学员', icon: TeamOutlined, roles: [2] },
     { path: '/app/progress-entry', title: '进度录入', desc: '一键录入练车学时', icon: FormOutlined, roles: [2] },
     { path: '/app/schedule', title: '约课日程', desc: '设置个人档期时间', icon: ScheduleOutlined, roles: [2] },
-    { path: '/app/feedback', title: '成绩反馈', desc: '录入考试成绩与评价', icon: SafetyCertificateOutlined, roles: [2] },
+    { path: '/app/feedback', title: '成绩反馈', desc: '录入考试成绩与评价', icon: SafetyCertificateOutlined, roles: [] },
     { path: '/app/coach', title: '教练管理', desc: '管理全校教练师资', icon: TeamOutlined, roles: [1] },
     { path: '/app/assign', title: '分配管理', desc: '审核报名并分配教练', icon: SolutionOutlined, roles: [1] },
     { path: '/app/statistics', title: '统计分析', desc: '全局经营与考试数据统计', icon: BarChartOutlined, roles: [1] },
     { path: '/app/progress', title: '学习进度', desc: '查看各科目学习情况', icon: LineChartOutlined, roles: [3] },
-    { path: '/app/exam', title: currentRole === 1 ? '考试管理' : '预约考场', desc: currentRole === 1 ? '分配考场、审核预约及录入成绩' : '预约考试、查询成绩', icon: SafetyCertificateOutlined, roles: [1, 3] },
+    { path: '/app/exam', title: '考试管理', desc: currentRole === 1 ? '分配考场、审核预约及录入成绩' : '预约考试、查询成绩', icon: SafetyCertificateOutlined, roles: [1, 3] },
     { path: '/app/baseinfo', title: '基础信息', desc: '管理考场与配置', icon: ScheduleOutlined, roles: [1] },
   ]
   return allShortcuts.filter(item => item.roles.includes(currentRole))

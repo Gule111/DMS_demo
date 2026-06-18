@@ -158,30 +158,36 @@ public class AuthService {
     }
 
     /**
-     * 退出登录 —— 从 Redis 中删除 Token
+     * 退出登录 / 强制注销会话 —— 从 Redis 中删除该用户的所有 Token
      *
      * @param userId 用户ID
      */
     public void logout(Long userId) {
+        // 拼接用户的 Access Token 缓存 Key (例如 "dms:token:12")
         String redisKey = tokenKeyPrefix + userId;
+        // 拼接用户的 Refresh Token 缓存 Key (例如 "dms:refresh_token:12")
         redisTemplate.delete(redisKey);
+        redisTemplate.delete(refreshTokenKeyPrefix + userId);
+        // 注：同时删除两者后，客户端的下一次请求将返回 401，且由于没有合法的 Refresh Token，其无感刷新流程会报错并强制跳转至登录页。
     }
 
     /**
-     * 刷新 Token 逻辑
+     * 刷新 Token 逻辑 (无感刷新接口调用)
+     * 用于当 Access Token 过期时，客户端携带保存在本地的 Refresh Token 来申请新的 Access Token
      */
     public String refreshToken(String refreshToken) {
-        // 1. 验证 Refresh Token 格式与是否过期
+        // 1. 验证传入的 Refresh Token 格式与 JWT 本身是否过期
         if (jwtUtils.isTokenExpired(refreshToken)) {
             throw new RuntimeException("Refresh Token 已过期，请重新登录");
         }
 
-        // 2. 解析用户信息
+        // 2. 解密解析 Token 中的用户信息
         Long userId = jwtUtils.getUserId(refreshToken);
         String username = jwtUtils.getUsername(refreshToken);
         Integer role = jwtUtils.getRole(refreshToken);
 
-        // 3. 校验 Redis 中的 Refresh Token 是否一致（防止重复利用或注销失效）
+        // 3. 校验 Redis 中的 Refresh Token 是否一致
+        // 因为用户的每次新登录都会用新生成的 Token 覆盖此 Key，这防止了旧的/被注销的 Refresh Token 被重复利用。
         String cachedRefreshToken = redisTemplate.opsForValue().get(refreshTokenKeyPrefix + userId);
         if (cachedRefreshToken == null || !cachedRefreshToken.equals(refreshToken)) {
             throw new RuntimeException("Refresh Token 无效或已在别处登录");
@@ -190,7 +196,7 @@ public class AuthService {
         // 4. 生成新的 Access Token
         String newAccessToken = jwtUtils.generateToken(userId, username, role);
 
-        // 5. 更新 Redis 中的 Access Token (可选，取决于注销策略)
+        // 5. 将新生成的 Access Token 存入/更新至 Redis
         redisTemplate.opsForValue().set(tokenKeyPrefix + userId, newAccessToken,
                 jwtUtils.getExpiration(), TimeUnit.MILLISECONDS);
 
@@ -198,11 +204,14 @@ public class AuthService {
     }
 
     /**
-     * 检查 Token 在 Redis 中是否仍然有效（未被主动注销）
+     * 检查 Token 在 Redis 中是否仍然有效
+     * 每次请求通过过滤器时都会调用此方法，比对请求携带的 Token 是否与 Redis 中当前有效的 Token 完全一致。
+     * 这构成了系统的“单点登录/顶号下线(SSO)”和“即时踢人”防御机制。
      */
     public boolean isTokenValid(Long userId, String token) {
         String redisKey = tokenKeyPrefix + userId;
         String cachedToken = redisTemplate.opsForValue().get(redisKey);
+        // 如果 Redis 中无此 Key（被 logout 删除），或者值与请求 Token 不匹配（被新登录顶号覆盖），则返回 false
         return token.equals(cachedToken);
     }
 }
